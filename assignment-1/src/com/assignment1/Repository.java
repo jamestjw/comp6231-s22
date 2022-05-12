@@ -16,6 +16,13 @@ public class Repository {
     public void set(String key, Integer value) {
         List<Integer> l = data.get(key);
 
+        l = new ArrayList<Integer>(Arrays.asList(value));
+        this.data.put(key, l);
+    }
+
+    public void add(String key, Integer value) {
+        List<Integer> l = data.get(key);
+
         if (l != null)
             l.add(value);
         else {
