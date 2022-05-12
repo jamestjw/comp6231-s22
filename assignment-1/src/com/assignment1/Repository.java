@@ -13,14 +13,14 @@ public class Repository {
         this.data = new HashMap<String, List<Integer>>();
     }
 
-    public void set(String key, Integer value) {
+    public synchronized void set(String key, Integer value) {
         List<Integer> l = data.get(key);
 
         l = new ArrayList<Integer>(Arrays.asList(value));
         this.data.put(key, l);
     }
 
-    public void add(String key, Integer value) {
+    public synchronized void add(String key, Integer value) {
         List<Integer> l = data.get(key);
 
         if (l != null)
@@ -31,15 +31,15 @@ public class Repository {
         }
     }
 
-    public List<Integer> get(String key) {
+    public synchronized List<Integer> get(String key) {
         return data.getOrDefault(key, Collections.emptyList());
     }
 
-    public void delete(String key) {
+    public synchronized void delete(String key) {
         data.remove(key);
     }
 
-    public Integer sum(String key) {
+    public synchronized Integer sum(String key) {
         List<Integer> l = this.get(key);
         return l.stream().reduce(0, Integer::sum);
     }
