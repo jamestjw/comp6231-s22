@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 public class RepositoryServer {
@@ -91,7 +93,7 @@ public class RepositoryServer {
         private void discoverPeers() {
             try {
                 while(!stop) {
-                    System.out.println(String.format("<%s> Discovering peers...", repoId));
+                    // System.out.println(String.format("<%s> Discovering peers...", repoId));
                     // Send a discovery message once every 5 seconds
                     byte[] msg = getDiscoverMessage().getBytes();
                     DatagramPacket packet = new DatagramPacket(msg, msg.length, group, MULTICAST_PORT);
@@ -134,7 +136,7 @@ public class RepositoryServer {
                         // TODO: Handle duplicates
                         peerDict.put(peerID, details);
 
-                        System.out.println(String.format("<%s> Discovered peer %s", repoId, peerID));
+                        // System.out.println(String.format("<%s> Discovered peer %s", repoId, peerID));
                     }
                 }
             }
@@ -306,6 +308,23 @@ public class RepositoryServer {
             }
         }
 
+        // Since tuples do not exist, first elem is the actual key
+        // Second elem is optionally the repo ID
+        private String[] breakdownCommandKey(String arg) {
+            Pattern r = Pattern.compile("(?:(\\w+)\\.)?(.*)");
+
+            String[] res = new String[2];
+            Matcher m = r.matcher(arg);
+
+            // This regex search should always return results
+            if (m.find()) {
+                res[0] = m.group(2);
+                res[1] = m.group(1);
+            }
+
+            return res;
+        }
+
         public void run() throws IOException {
             sendln(String.format("OK Repository <<%s>> ready", repoId));
             while (isConnected()) {
@@ -318,7 +337,11 @@ public class RepositoryServer {
                         } else {
                             try{
                                 int number = Integer.parseInt(args[2]);
-                                repo.set(args[1], number);
+
+                                String[] identifiers = breakdownCommandKey(args[1]);
+
+                                repo.set(identifiers[0], number);
+
                                 sendln("OK");
                             } catch (NumberFormatException ex){
                                 sendln("Invalid value in SET command, expected INT value'");
@@ -332,7 +355,10 @@ public class RepositoryServer {
                         } else {
                             try{
                                 int number = Integer.parseInt(args[2]);
-                                repo.add(args[1], number);
+
+                                String[] identifiers = breakdownCommandKey(args[1]);
+
+                                repo.add(identifiers[0], number);
                                 sendln("OK");
                             } catch (NumberFormatException ex){
                                 sendln("Invalid value in ADD command, expected INT value'");
@@ -344,7 +370,10 @@ public class RepositoryServer {
                         if (args.length < 2) {
                             sendln("Invalid arguments, expected 'GET <identifier> instead'");
                         } else {
-                            List<Integer> values = repo.get(args[1]);
+                            String[] identifiers = breakdownCommandKey(args[1]);
+
+                            List<Integer> values = repo.get(identifiers[0]);
+
                             String listString = values.stream().map(String::valueOf).collect(Collectors.joining(", "));
                             sendln(String.format("OK %s", listString));
                         }
@@ -354,7 +383,8 @@ public class RepositoryServer {
                         if (args.length < 2) {
                             sendln("Invalid arguments, expected 'DELETE <identifier> instead'");
                         } else {
-                            int res = repo.sum(args[1]);
+                            String[] identifiers = breakdownCommandKey(args[1]);
+                            int res = repo.sum(identifiers[0]);
                             sendln(String.format("OK %d", res));
                         }
 
@@ -363,7 +393,8 @@ public class RepositoryServer {
                         if (args.length < 2) {
                             sendln("Invalid arguments, expected 'DELETE <identifier> instead'");
                         } else {
-                            repo.delete(args[1]);
+                            String[] identifiers = breakdownCommandKey(args[1]);
+                            repo.delete(identifiers[0]);
                             sendln("OK");
                         }
 
