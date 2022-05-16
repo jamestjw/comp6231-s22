@@ -1,0 +1,7 @@
+SET a 12
+DELETE b
+ADD a 13
+GET a
+SUM a
+SET a 10
+GET a

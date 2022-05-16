@@ -24,6 +24,10 @@ public class RepositoryServer {
         this.sc = new ServerSocket(port);
     }
 
+    public int getPort() {
+        return sc.getLocalPort();
+    }
+
     public void start() {
         socklist = new SocketList();
         repo = new Repository();
