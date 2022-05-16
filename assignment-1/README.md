@@ -5,3 +5,8 @@ First start up the Java app, then to test out the application in single repo mod
 # Insert the correct port
 cat single-repo-input.txt | netcat localhost 49456 
 ```
+
+## Multicast
+```bash
+echo -n "DISCOVER MY-REP-ID"| netcat -vu 230.0.0.0 6789
+```

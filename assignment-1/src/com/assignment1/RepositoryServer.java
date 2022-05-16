@@ -1,8 +1,14 @@
 package com.assignment1;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,9 +25,19 @@ public class RepositoryServer {
     Repository repo;
     String repoId;
     SocketList socklist;
+    MulticastSocket multicastSocket;
+    static int MULTICAST_SOCKET = 6789;
 
     public RepositoryServer(int port) throws IOException {
         this.sc = new ServerSocket(port);
+        initialiseMulticast();
+    }
+
+    private void initialiseMulticast() throws IOException {
+        // TODO: Make the address a constant too
+        InetAddress mcastaddr = InetAddress.getByName("230.0.0.0");
+        multicastSocket = new MulticastSocket(MULTICAST_SOCKET);
+        multicastSocket.joinGroup(mcastaddr);
     }
 
     public int getPort() {
@@ -34,10 +50,57 @@ public class RepositoryServer {
         repoId = "R1";
 
         new Thread(new MainThreadHandler()).start();
+        new Thread(new PeerDiscoveryHandler()).start();
     }
 
     public void stop() {
 
+    }
+
+    private class PeerDiscoveryHandler implements Runnable {
+        public boolean stop = false;
+        public void run() {
+            byte[] buffer = new byte[1024];
+            try {
+                while(!stop) {
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+
+                    try {
+                        multicastSocket.receive(packet);
+                    }
+                    catch(Exception ex) {
+                        reportError(ex);
+                    }
+
+                    String msg = new String(packet.getData(), packet.getOffset(),packet.getLength());
+                    System.out.println("[Multicast UDP message received]  >> " + msg);
+
+                    System.out.println(packet.getAddress());
+                    System.out.println(packet.getPort());
+                    try {
+
+                        reply(packet.getAddress(), packet.getPort());
+                        System.out.println("responded");
+                    } catch(Exception ex) {
+                        reportError(ex);
+                    }
+                }
+            }
+            finally {
+                log(String.format("Server %s stopped. Print Repo id here!!"));
+            }
+        }
+
+        private void reply(InetAddress ip, int port) throws IOException {
+            byte[] msg = buildPeerDiscoveryResponse().getBytes();
+            DatagramPacket packet = new DatagramPacket(msg, msg.length,
+               ip, port);
+            multicastSocket.send(packet);
+        }
+
+        private String buildPeerDiscoveryResponse() {
+            return String.format("ALIVE %s", repoId);
+        }
     }
 
     private class MainThreadHandler implements Runnable {
@@ -143,7 +206,6 @@ public class RepositoryServer {
 
             try {
                 this.input = new DataInputStream(s.getInputStream());
-                this.output = new DataOutputStream(s.getOutputStream());
                 this.scanner = new Scanner(s.getInputStream());
                 this.writer = new PrintWriter(s.getOutputStream());
             }
