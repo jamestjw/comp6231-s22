@@ -2,14 +2,17 @@ package com.assignment1;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.DataInputStream;
@@ -26,7 +29,11 @@ public class RepositoryServer {
     String repoId;
     SocketList socklist;
     MulticastSocket multicastSocket;
-    static int MULTICAST_SOCKET = 6789;
+    HashMap<String, PeerDetails> peerDict = new HashMap<>();
+
+
+    static String MULTICAST_ADDRESS = "230.0.0.0";
+    static int MULTICAST_PORT = 6789;
 
     public RepositoryServer(int port) throws IOException {
         this.sc = new ServerSocket(port);
@@ -35,8 +42,8 @@ public class RepositoryServer {
 
     private void initialiseMulticast() throws IOException {
         // TODO: Make the address a constant too
-        InetAddress mcastaddr = InetAddress.getByName("230.0.0.0");
-        multicastSocket = new MulticastSocket(MULTICAST_SOCKET);
+        InetAddress mcastaddr = InetAddress.getByName(MULTICAST_ADDRESS);
+        multicastSocket = new MulticastSocket(MULTICAST_PORT);
         multicastSocket.joinGroup(mcastaddr);
     }
 
@@ -50,14 +57,100 @@ public class RepositoryServer {
         repoId = "R1";
 
         new Thread(new MainThreadHandler()).start();
-        new Thread(new PeerDiscoveryHandler()).start();
+        new Thread(new PeerDiscoveryServerHandler()).start();
+        
+        try {
+            new Thread(new PeerSearcher()).start();
+        } catch (IOException e) {
+            reportError(e);
+        }
     }
 
     public void stop() {
 
     }
 
-    private class PeerDiscoveryHandler implements Runnable {
+    // Class that is responsible to search for peers
+    private class PeerSearcher implements Runnable {
+        public boolean stop = false;
+        DatagramSocket socket;
+        InetAddress group;
+
+        public PeerSearcher() throws IOException {
+            socket = new DatagramSocket();
+            group = InetAddress.getByName(MULTICAST_ADDRESS);
+        }
+
+        public void run() {
+            // Use one thread to discover peers
+            new Thread(() -> discoverPeers()).start();
+            // Use another one to handle responses
+            new Thread(() -> savePeers()).start();
+        }
+
+        private void discoverPeers() {
+            try {
+                while(!stop) {
+                    System.out.println(String.format("<%s> Discovering peers...", repoId));
+                    // Send a discovery message once every 2 seconds
+                    byte[] msg = getDiscoverMessage().getBytes();
+                    DatagramPacket packet = new DatagramPacket(msg, msg.length, group, MULTICAST_PORT);
+                    try {
+                        socket.send(packet);
+                    } catch (IOException e) {
+                        reportError(e);
+                    }
+
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        // Ignore the fact that we have been interrupted
+                    }
+                }
+            }
+            finally {
+                log(String.format("Server %s stopped. Print Repo id here!!"));
+            }
+        }
+
+        private void savePeers() {
+            byte[] buffer = new byte[1024];
+            try {
+                while(!stop) {
+                    DatagramPacket request = new DatagramPacket(buffer, buffer.length); 
+                    try {
+                        socket.receive(request);
+                    } catch (IOException e) {
+                        reportError(e);
+                        continue;
+                    }
+                    String msg = new String(request.getData(), request.getOffset(), request.getLength());
+                    String[] args = msg.split("\\s+");
+
+                    if (args.length >= 2 && args[0].equals("ALIVE")) {
+                        PeerDetails details = new PeerDetails(request.getAddress().getHostAddress(), request.getPort());
+                        String peerID = args[1];
+
+                        // TODO: Handle duplicates
+                        peerDict.put(peerID, details);
+
+                        System.out.println(String.format("<%s> Discovered peer %s", repoId, peerID));
+                    }
+                }
+            }
+            finally {
+                log(String.format("Server %s stopped. Print Repo id here!!"));
+            }
+        }
+
+        private String getDiscoverMessage() {
+            return String.format("DISCOVER %s", repoId);
+        }
+    }
+
+    // Class that is responsible for announcing the presence of this server
+    // as a peer to others
+    private class PeerDiscoveryServerHandler implements Runnable {
         public boolean stop = false;
         public void run() {
             byte[] buffer = new byte[1024];
@@ -73,14 +166,9 @@ public class RepositoryServer {
                     }
 
                     String msg = new String(packet.getData(), packet.getOffset(),packet.getLength());
-                    System.out.println("[Multicast UDP message received]  >> " + msg);
 
-                    System.out.println(packet.getAddress());
-                    System.out.println(packet.getPort());
                     try {
-
                         reply(packet.getAddress(), packet.getPort());
-                        System.out.println("responded");
                     } catch(Exception ex) {
                         reportError(ex);
                     }
@@ -186,6 +274,7 @@ public class RepositoryServer {
     private void reportError(Exception ex) {
         String s = ex.getMessage();
         System.out.println(s);
+        ex.printStackTrace();
     }
 
     private void log(String msg) {
@@ -194,8 +283,6 @@ public class RepositoryServer {
 
     private class SocketProtocol {
         private Socket s;
-        private DataInputStream input;
-        private DataOutputStream output;
         private Scanner scanner;
         private PrintWriter writer;
         private Repository repo;
@@ -205,7 +292,6 @@ public class RepositoryServer {
             this.repo = repo;
 
             try {
-                this.input = new DataInputStream(s.getInputStream());
                 this.scanner = new Scanner(s.getInputStream());
                 this.writer = new PrintWriter(s.getOutputStream());
             }
@@ -297,5 +383,15 @@ public class RepositoryServer {
         protected void close() throws IOException { s.close(); }
 
         protected boolean isConnected() { return s.isConnected(); }
+    }
+
+    private class PeerDetails {
+        String address;
+        int port;
+
+        public PeerDetails(String address, int port) {
+            this.address = address;
+            this.port = port;
+        }
     }
 }
