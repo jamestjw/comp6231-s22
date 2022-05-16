@@ -35,8 +35,9 @@ public class RepositoryServer {
     static String MULTICAST_ADDRESS = "230.0.0.0";
     static int MULTICAST_PORT = 6789;
 
-    public RepositoryServer(int port) throws IOException {
+    public RepositoryServer(int port, String id) throws IOException {
         this.sc = new ServerSocket(port);
+        this.repoId = id;
         initialiseMulticast();
     }
 
@@ -54,7 +55,6 @@ public class RepositoryServer {
     public void start() {
         socklist = new SocketList();
         repo = new Repository();
-        repoId = "R1";
 
         new Thread(new MainThreadHandler()).start();
         new Thread(new PeerDiscoveryServerHandler()).start();
@@ -92,7 +92,7 @@ public class RepositoryServer {
             try {
                 while(!stop) {
                     System.out.println(String.format("<%s> Discovering peers...", repoId));
-                    // Send a discovery message once every 2 seconds
+                    // Send a discovery message once every 5 seconds
                     byte[] msg = getDiscoverMessage().getBytes();
                     DatagramPacket packet = new DatagramPacket(msg, msg.length, group, MULTICAST_PORT);
                     try {
@@ -102,7 +102,7 @@ public class RepositoryServer {
                     }
 
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(5000);
                     } catch (InterruptedException e) {
                         // Ignore the fact that we have been interrupted
                     }
@@ -165,12 +165,18 @@ public class RepositoryServer {
                         reportError(ex);
                     }
 
-                    String msg = new String(packet.getData(), packet.getOffset(),packet.getLength());
+                    String msg = new String(packet.getData(), packet.getOffset(), packet.getLength());
+                    String[] args = msg.split("\\s+");
 
-                    try {
-                        reply(packet.getAddress(), packet.getPort());
-                    } catch(Exception ex) {
-                        reportError(ex);
+                    if (args[0].equals("DISCOVER")) {
+                        // We do not want to discover ourselves
+                        if (args.length >= 2 && args[1].equals(repoId)) continue;
+
+                        try {
+                            reply(packet.getAddress(), packet.getPort());
+                        } catch(Exception ex) {
+                            reportError(ex);
+                        }
                     }
                 }
             }
