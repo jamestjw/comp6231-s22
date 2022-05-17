@@ -414,6 +414,39 @@ public class RepositoryServer {
                         }
 
                         break;
+                    case "DSUM":
+                        Pattern pattern = Pattern.compile("DSUM\\s+(.*)\\s+INCLUDING\\s+(.*)");
+
+                        Matcher m = pattern.matcher(data);
+
+                        if (m.find()) {
+                            String k = m.group(1);
+                            int res = repo.sum(k);
+                            String[] repos = m.group(2).split("\\s+");
+                            boolean error = false;
+
+                            for (String r: repos) {
+                                // Ignore current repo
+                                if (r == repoId)
+                                    continue;
+
+                                PeerDetails details = peerDict.get(r);
+                                if (details != null) {
+                                    res += remoteGet(details, k);
+                                } else {
+                                    sendln(String.format("ERR Non-existence or ambiguous repository %s", r));
+                                    error = true;
+                                    break;
+                                }
+                            }
+
+                            if (!error)
+                                sendln(String.format("OK %d", res));
+                        } else {
+                            sendln("Expected format 'DSUM <identifier> INCLUDING <repo-1> <repo-2> ...'");
+                        }
+
+                        break;
                     case "DELETE":
                         if (args.length < 2) {
                             sendln("Invalid arguments, expected 'DELETE <identifier> instead'");
@@ -456,6 +489,30 @@ public class RepositoryServer {
             } else {
                 sendln(String.format("ERR Non-existence or ambiguous repository %s", remoteID));
             }
+        }
+
+        protected int remoteGet(PeerDetails remoteDetails, String key) {
+            // Remove reference to remote repository
+            String command = String.format("GET %s", key);
+            String remoteRes = new RemoteCallHandler(
+                            remoteDetails.getAddress(),
+                            remoteDetails.getPort()
+                        ).runCommand(command);
+
+            // We assume that there is a space after the OK
+            Pattern r = Pattern.compile("OK\s+(.+)");
+            Matcher m = r.matcher(remoteRes);
+
+            int res = 0;
+            if (m.find()) {
+                String[] vals = m.group(1).split(",\\s+");
+
+                for (String val: vals) {
+                    res += Integer.parseInt(val);
+                }
+            }
+
+            return res;
         }
 
         protected void sendln(String data) {
