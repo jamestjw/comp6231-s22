@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -127,11 +128,13 @@ public class RepositoryServer {
                         continue;
                     }
                     String msg = new String(request.getData(), request.getOffset(), request.getLength());
-                    String[] args = msg.split("\\s+");
 
-                    if (args.length >= 2 && args[0].equals("ALIVE")) {
-                        PeerDetails details = new PeerDetails(request.getAddress().getHostAddress(), request.getPort());
-                        String peerID = args[1];
+                    Pattern r = Pattern.compile("ALIVE\s+(\\w+)\s+(.*)\s+(\\d+)");
+                    Matcher m = r.matcher(msg);
+
+                    if (m.find()) {
+                        PeerDetails details = new PeerDetails(m.group(2), Integer.parseInt(m.group(3)));
+                        String peerID = m.group(1);
 
                         // TODO: Handle duplicates
                         peerDict.put(peerID, details);
@@ -195,7 +198,12 @@ public class RepositoryServer {
         }
 
         private String buildPeerDiscoveryResponse() {
-            return String.format("ALIVE %s", repoId);
+            return String.format(
+                "ALIVE %s %s %d",
+                repoId,
+                "127.0.0.1", // TODO: Return this dynamically?
+                getPort()
+            );
         }
     }
 
@@ -242,6 +250,7 @@ public class RepositoryServer {
             }
             catch(Exception ex) {
                 System.out.println("Error in SafeRunnable: " + ex.getMessage());
+                ex.printStackTrace();
             }
             finally {
                 try {
@@ -340,9 +349,12 @@ public class RepositoryServer {
 
                                 String[] identifiers = breakdownCommandKey(args[1]);
 
-                                repo.set(identifiers[0], number);
-
-                                sendln("OK");
+                                if (identifiers[1] == null || identifiers[1].equals(repoId)) {
+                                    repo.set(identifiers[0], number);
+                                    sendln("OK");
+                                } else {
+                                    handleRemoteCommand(identifiers[1], data);
+                                }
                             } catch (NumberFormatException ex){
                                 sendln("Invalid value in SET command, expected INT value'");
                             }
@@ -358,8 +370,12 @@ public class RepositoryServer {
 
                                 String[] identifiers = breakdownCommandKey(args[1]);
 
-                                repo.add(identifiers[0], number);
-                                sendln("OK");
+                                if (identifiers[1] == null || identifiers[1].equals(repoId)) {
+                                    repo.add(identifiers[0], number);
+                                    sendln("OK");
+                                } else {
+                                    handleRemoteCommand(identifiers[1], data);
+                                }
                             } catch (NumberFormatException ex){
                                 sendln("Invalid value in ADD command, expected INT value'");
                             }
@@ -374,8 +390,12 @@ public class RepositoryServer {
 
                             List<Integer> values = repo.get(identifiers[0]);
 
-                            String listString = values.stream().map(String::valueOf).collect(Collectors.joining(", "));
-                            sendln(String.format("OK %s", listString));
+                            if (identifiers[1] == null || identifiers[1].equals(repoId)) {
+                                String listString = values.stream().map(String::valueOf).collect(Collectors.joining(", "));
+                                sendln(String.format("OK %s", listString));
+                            } else {
+                                handleRemoteCommand(identifiers[1], data);
+                            }
                         }
 
                         break;
@@ -384,8 +404,13 @@ public class RepositoryServer {
                             sendln("Invalid arguments, expected 'DELETE <identifier> instead'");
                         } else {
                             String[] identifiers = breakdownCommandKey(args[1]);
-                            int res = repo.sum(identifiers[0]);
-                            sendln(String.format("OK %d", res));
+
+                            if (identifiers[1] == null || identifiers[1].equals(repoId)) {
+                                int res = repo.sum(identifiers[0]);
+                                sendln(String.format("OK %d", res));
+                            } else {
+                                handleRemoteCommand(identifiers[1], data);
+                            }
                         }
 
                         break;
@@ -394,8 +419,13 @@ public class RepositoryServer {
                             sendln("Invalid arguments, expected 'DELETE <identifier> instead'");
                         } else {
                             String[] identifiers = breakdownCommandKey(args[1]);
-                            repo.delete(identifiers[0]);
-                            sendln("OK");
+
+                            if (identifiers[1] == null || identifiers[1].equals(repoId)) {
+                                repo.delete(identifiers[0]);
+                                sendln("OK");
+                            } else {
+                                handleRemoteCommand(identifiers[1], data);
+                            }
                         }
 
                         break;
@@ -410,11 +440,33 @@ public class RepositoryServer {
             }
         }
 
+        protected void handleRemoteCommand(String remoteID, String command) {
+            PeerDetails remoteDetails = peerDict.get(remoteID);
+            // Remove reference to remote repository
+            command = command.replace(remoteID+ ".", "");
+
+            if (remoteDetails != null) {
+                // Forward results to user
+                sendln(
+                    new RemoteCallHandler(
+                        remoteDetails.getAddress(),
+                        remoteDetails.getPort()
+                    ).runCommand(command)
+                );
+            } else {
+                sendln(String.format("ERR Non-existence or ambiguous repository %s", remoteID));
+            }
+        }
+
         protected void sendln(String data) {
             writer.println(data); writer.flush();
         }
         protected String recvln() {
-            return scanner.nextLine();
+            try {
+                return scanner.nextLine();
+            } catch (NoSuchElementException e) {
+                return "";
+            }
         }
 
         protected void close() throws IOException { s.close(); }
@@ -429,6 +481,45 @@ public class RepositoryServer {
         public PeerDetails(String address, int port) {
             this.address = address;
             this.port = port;
+        }
+
+        public String getAddress() {
+            return address;
+        }
+
+        public int getPort() {
+            return port;
+        }
+    }
+
+    private class RemoteCallHandler {
+        private Scanner scanner;
+        private PrintWriter writer;
+        private Socket s;
+
+        public RemoteCallHandler(String address, int port) {
+            try {
+                this.s = new Socket(address, port);
+                this.scanner = new Scanner(s.getInputStream());
+                this.writer = new PrintWriter(s.getOutputStream());
+            }
+            catch (Exception ex) {
+                throw new RuntimeException("Socket I/O Error", ex);
+            }
+        }
+
+        protected void sendln(String data) {
+            writer.println(data); writer.flush();
+        }
+        protected String recvln() {
+            return scanner.nextLine();
+        }
+
+        public String runCommand(String command) {
+            // Get the introductory text out of the way
+            recvln();
+            sendln(command);
+            return recvln();
         }
     }
 }
