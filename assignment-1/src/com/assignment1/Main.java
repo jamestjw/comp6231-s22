@@ -23,7 +23,7 @@ public class Main {
             }
         }
 
-        System.out.println(String.format("\nServers are listening on ports %s.", Arrays.toString(ports)));
+        System.out.printf("\nServers are listening on ports %s.%n", Arrays.toString(ports));
         System.out.println("\nPress hit ENTER if you wish to stop the servers. Note that the service may NOT stop immediately.");
         new Scanner(System.in).nextLine(); // waiting for EOL from the console to terminate
 

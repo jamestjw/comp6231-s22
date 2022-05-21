@@ -10,14 +10,11 @@ public class Repository {
     HashMap<String, List<Integer>> data;
 
     public Repository() {
-        this.data = new HashMap<String, List<Integer>>();
+        this.data = new HashMap<>();
     }
 
     public synchronized void set(String key, Integer value) {
-        List<Integer> l = data.get(key);
-
-        l = new ArrayList<Integer>(Arrays.asList(value));
-        this.data.put(key, l);
+        this.data.put(key, new ArrayList<>(Arrays.asList(value)));
     }
 
     public synchronized void add(String key, Integer value) {
@@ -26,7 +23,7 @@ public class Repository {
         if (l != null)
             l.add(value);
         else {
-            l = new ArrayList<Integer>(Arrays.asList(value));
+            l = new ArrayList<>(Arrays.asList(value));
             this.data.put(key, l);
         }
     }
