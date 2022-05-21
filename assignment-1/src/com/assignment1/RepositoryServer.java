@@ -72,16 +72,16 @@ public class RepositoryServer {
                             // TODO add thread to the threads list
                         }
                         catch(Exception ex) {
-                            reportError(ex);
+                            Logger.getInstance().reportError(ex);
                         }
                     }
                     catch(Exception ex) {
-                        reportError(ex);
+                        Logger.getInstance().reportError(ex);
                     }
                 }
             }
             finally {
-                log(String.format("Server %s stopped.",repoId));
+                Logger.getInstance().log(String.format("Server %s stopped.",repoId));
             }
         }
     }
@@ -106,7 +106,7 @@ public class RepositoryServer {
                     s.close();
                 }
                 catch (Exception ex) {
-                    reportError(ex);
+                    Logger.getInstance().reportError(ex);
                 }
             }
         }

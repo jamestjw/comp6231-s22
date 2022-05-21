@@ -6,7 +6,6 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 
 public class PeerDiscoveryServer implements Runnable {
-
     private final String multicastAddress;
     private final int multicastPort;
     private MulticastSocket multicastSocket;
@@ -43,7 +42,7 @@ public class PeerDiscoveryServer implements Runnable {
                 try {
                     multicastSocket.receive(packet);
                 } catch (Exception ex) {
-                    reportError(ex);
+                    Logger.getInstance().reportError(ex);
                 }
 
                 String msg = new String(packet.getData(), packet.getOffset(), packet.getLength());
@@ -56,12 +55,12 @@ public class PeerDiscoveryServer implements Runnable {
                     try {
                         reply(packet.getAddress(), packet.getPort());
                     } catch (Exception ex) {
-                        reportError(ex);
+                        Logger.getInstance().reportError(ex);
                     }
                 }
             }
         } finally {
-            log(String.format("Server %s stopped.", repoId));
+            Logger.getInstance().log(String.format("Server %s stopped.", repoId));
         }
     }
 
@@ -79,16 +78,5 @@ public class PeerDiscoveryServer implements Runnable {
                 repoServerAddress,
                 repoServerPort // TCP Port
         );
-    }
-
-    private void reportError(Exception ex) {
-        String s = ex.getMessage();
-        System.out.println(s);
-        ex.printStackTrace();
-    }
-
-    //TODO: Introduce logger later
-    private void log(String msg) {
-        System.out.println(msg);
     }
 }
