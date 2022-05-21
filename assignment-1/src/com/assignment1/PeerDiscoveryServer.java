@@ -12,6 +12,7 @@ public class PeerDiscoveryServer implements Runnable {
     private MulticastSocket multicastSocket;
     private final String repoId;
     private final int repoServerPort;
+    private final String repoServerAddress;
 
     private void initializeMulticast() throws IOException {
         // TODO: Make the address a constant too
@@ -20,13 +21,14 @@ public class PeerDiscoveryServer implements Runnable {
         multicastSocket.joinGroup(mcastaddr);
     }
 
-    PeerDiscoveryServer(String multicastAddress, int multicastPort, String repoId, int repoServerPort) throws IOException {
+    PeerDiscoveryServer(String multicastAddress, int multicastPort, String repoId, String repoServerAddress, int repoServerPort) throws IOException {
         this.repoId = repoId;
         this.multicastAddress = multicastAddress;
         this.multicastPort = multicastPort;
-        initializeMulticast();
         this.repoServerPort = repoServerPort;
+        this.repoServerAddress = repoServerAddress;
 
+        initializeMulticast();
     }
 
     //TODO: make public fucn to stop thread
@@ -74,8 +76,8 @@ public class PeerDiscoveryServer implements Runnable {
         return String.format(
                 "ALIVE %s %s %d",
                 repoId,
-                "127.0.0.1", // TODO: Return this dynamically?
-                repoServerPort// TCP Port
+                repoServerAddress,
+                repoServerPort // TCP Port
         );
     }
 

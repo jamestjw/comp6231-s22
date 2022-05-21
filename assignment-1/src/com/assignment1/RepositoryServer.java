@@ -27,6 +27,9 @@ public class RepositoryServer {
         this.repoId = id;
     }
 
+    public String getAddress() {
+        return sc.getInetAddress().getHostAddress();
+    }
 
     public int getPort() {
         return sc.getLocalPort();
@@ -37,7 +40,7 @@ public class RepositoryServer {
         repo = new Repository();
 
         new Thread(new MainThreadHandler()).start();
-         this.pdp = new PeerDiscoveryProtocol(repoId,getPort());
+         this.pdp = new PeerDiscoveryProtocol(repoId, getAddress(), getPort());
          pdp.start();
 
     }
