@@ -7,6 +7,8 @@ import java.net.InetAddress;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.assignment1.PeerDictionary.PeerDetails;
+
 public class PeerSearcher implements Runnable {
     public boolean stop = false;
     DatagramSocket socket;
@@ -79,7 +81,15 @@ public class PeerSearcher implements Runnable {
 
                     // TODO: Handle duplicates
                     String peerID = m.group(1);
-                    peerDict.set(peerID, m.group(2), Integer.parseInt(m.group(3)));
+                    String address = m.group(2);
+                    int port = Integer.parseInt(m.group(3));
+                    PeerDetails peerDetails = peerDict.get(peerID);
+                    if (peerDetails != null) {
+                        String currentAddress = peerDetails.address();
+                        int currentPort = peerDetails.port();
+                        if (!currentAddress.equals(address) || currentPort != port)
+                            peerDict.deleteAndBlacklist(peerID);
+                    } else peerDict.set(peerID, address, port);
 
                     // System.out.println(String.format("<%s> Discovered peer %s", repoId, peerID));
                 }
