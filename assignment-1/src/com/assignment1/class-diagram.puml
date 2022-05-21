@@ -1,0 +1,129 @@
+@startuml
+class PeerDetails {
+    - address: String
+    - port: int
+    
+    + getAddress(): String
+    + getPort(): int
+}
+
+class PeerDictionary {
+    - data: HashMap
+    - blacklist: Array<String>
+
+    + get(): PeerDetails
+    + set(): void
+    + deleteAndBlacklist(): void
+}
+
+PeerDictionary *-- PeerDetails
+
+class PeerSearcher {
+    - peerDict: PeerDictionary
+
+    + run(): void
+    - discoverPeers(): void
+    - savePeers(): void
+    - getDiscoverMessage(): String
+}
+
+class PeerDiscoveryServer {
+    - repoId: String
+    - multicastAddress: String
+    - multicastPort: int
+    ' TODO: Need this?
+    - stop: boolean
+    - multicastSocket: MulticastSocket
+    
+    + initializeMulticast(): void
+    - reply(): void
+    - buildPeerDiscoveryResponse(): String
+}
+
+class PeerDiscoveryProtocol {
+    {static} MULTICAST_ADDRESS: String
+    {static} MULTICAST_PORT: int
+    - repoId: String
+    - peerDict: PeerDictionary
+    - repoServerPort: int
+
+    + start(): void
+    + getPeerDict(): PeerDictionary
+}
+
+PeerDiscoveryProtocol -- PeerDiscoveryServer
+PeerDiscoveryProtocol -- PeerSearcher
+
+class Repository {
+    - data: HashMap
+
+    + set(): void
+    + add(): void
+    + get(): List<Integer>
+    + delete(): void
+    + sum(): Integer
+}
+
+class SocketList {
+    - list: ArrayList
+
+    + add(): void
+    ' TODO: Need this?
+    - close(): void
+}
+
+class RepositoryProtocol {
+    - s: Socket
+    - scanner: Scanner
+    - writer: PrintWriter
+    - repo: Repository
+
+    + run(): void
+    - breakdownCommandKey(): String[]
+    - handleRemoteCommand(): void
+    - remoteGet(): int
+    - sendln(): void
+    - recvln(): String
+    - close(): void
+    - isConnected(): boolean
+}
+
+class RemoteCallHandler {
+    - scanner: Scanner
+    - writer: PrintWriter
+    - s: Socket
+
+    - sendln(): void
+    - recvln(): String
+    - runCommand(): String
+}
+
+RepositoryProtocol -- RemoteCallHandler
+
+class MainThreadHandler {
+    - stop: boolean
+    + run(): void
+}
+
+MainThreadHandler -- RepositoryProtocol
+
+class RepositoryServer {
+    - repoID: String
+    - repo: Repository
+    - sockList: SocketList
+    - sc: ServerSocket
+ 
+    + start(): void
+    ' TODO: Check if this is still necessary
+    + stop(): void
+    + getPort(): int
+}
+
+RepositoryServer -- PeerDiscoveryProtocol
+RepositoryServer -- PeerDictionary
+RepositoryServer -- Repository
+RepositoryServer -- SocketList
+RepositoryServer -- MainThreadHandler
+
+@enduml
+
