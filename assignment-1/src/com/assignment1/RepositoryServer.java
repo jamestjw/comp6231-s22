@@ -279,6 +279,10 @@ public class RepositoryServer {
                         sendln("CIAO Arrivederci!");
                         close();
                         return;
+                    case "GET-PEERS":
+                        String listString = String.join(", ", getPeerIdList());
+                        sendln(String.format("OK %s", listString));
+                        break;
                     default:
                         sendln("ERR Sorry did not understand. Say QUIT if you wish to exit.");
                         break;
@@ -373,5 +377,9 @@ public class RepositoryServer {
             sendln(command);
             return recvln();
         }
+    }
+
+    private String[] getPeerIdList() {
+        return pdp.getPeerDict().getKeys();
     }
 }
