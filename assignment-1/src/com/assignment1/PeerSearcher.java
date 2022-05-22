@@ -47,7 +47,7 @@ public class PeerSearcher implements Runnable {
                 try {
                     socket.send(packet);
                 } catch (IOException e) {
-                    reportError(e);
+                    Logger.getInstance().reportError(e);
                 }
 
                 try {
@@ -57,7 +57,7 @@ public class PeerSearcher implements Runnable {
                 }
             }
         } finally {
-            log(String.format("Server %s stopped.", repoId));
+            Logger.getInstance().log(String.format("Server %s stopped.", repoId));
         }
     }
 
@@ -69,7 +69,7 @@ public class PeerSearcher implements Runnable {
                 try {
                     socket.receive(request);
                 } catch (IOException e) {
-                    reportError(e);
+                    Logger.getInstance().reportError(e);
                     continue;
                 }
                 String msg = new String(request.getData(), request.getOffset(), request.getLength());
@@ -95,23 +95,12 @@ public class PeerSearcher implements Runnable {
                 }
             }
         } finally {
-            log(String.format("Server %s stopped.", repoId));
+            Logger.getInstance().log(String.format("Server %s stopped.", repoId));
         }
     }
 
     private String getDiscoverMessage() {
         return String.format("DISCOVER %s", repoId);
-    }
-
-    private void reportError(Exception ex) {
-        String s = ex.getMessage();
-        System.out.println(s);
-        ex.printStackTrace();
-    }
-
-    //TODO: Introduce logger later
-    private void log(String msg) {
-        System.out.println(msg);
     }
 }
 
