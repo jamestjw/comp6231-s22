@@ -125,5 +125,14 @@ RepositoryServer -- Repository
 RepositoryServer -- SocketList
 RepositoryServer -- MainThreadHandler
 
+class Logger {
+    - {static} logger: Logger
+    - out: PrintStream
+
+    + {static} getInstance(): Logger
+    + reportError: void
+    + log: void
+}
+
 @enduml
 
