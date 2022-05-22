@@ -12,22 +12,18 @@ import com.assignment1.PeerDictionary.PeerDetails;
 public class PeerSearcher implements Runnable {
     public boolean stop = false;
     DatagramSocket socket;
-    InetAddress group;
+    InetAddress groupAddress;
     String repoId;
     private final int multicastPort;
 
-
-    //TODO: delete HashMap<String, PeerDetails> peerDict = new HashMap<>();
     PeerDictionary peerDict;
 
     public PeerSearcher(String multicastAddress, int multicastPort, String repoId, PeerDictionary peerDict) throws IOException {
         this.multicastPort = multicastPort;
         this.repoId = repoId;
         socket = new DatagramSocket();
-        //TODO: RENAME group takes address
-        group = InetAddress.getByName(multicastAddress);
+        groupAddress = InetAddress.getByName(multicastAddress);
         this.peerDict = peerDict;
-
     }
 
     public void run() {
@@ -43,7 +39,7 @@ public class PeerSearcher implements Runnable {
                 // System.out.println(String.format("<%s> Discovering peers...", repoId));
                 // Send a discovery message once every 5 seconds
                 byte[] msg = getDiscoverMessage().getBytes();
-                DatagramPacket packet = new DatagramPacket(msg, msg.length, group, multicastPort);
+                DatagramPacket packet = new DatagramPacket(msg, msg.length, groupAddress, multicastPort);
                 try {
                     socket.send(packet);
                 } catch (IOException e) {
@@ -78,8 +74,6 @@ public class PeerSearcher implements Runnable {
                 Matcher m = r.matcher(msg);
 
                 if (m.find()) {
-
-                    // TODO: Handle duplicates
                     String peerID = m.group(1);
                     String address = m.group(2);
                     int port = Integer.parseInt(m.group(3));

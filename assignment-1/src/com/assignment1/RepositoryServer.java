@@ -69,7 +69,6 @@ public class RepositoryServer {
                                     throw new RuntimeException(e);
                                 }
                             }).start();
-                            // TODO add thread to the threads list
                         }
                         catch(Exception ex) {
                             Logger.getInstance().reportError(ex);
@@ -110,16 +109,6 @@ public class RepositoryServer {
                 }
             }
         }
-    }
-
-    private void reportError(Exception ex) {
-        String s = ex.getMessage();
-        System.out.println(s);
-        ex.printStackTrace();
-    }
-
-    private void log(String msg) {
-        System.out.println(msg);
     }
 
     private class SocketProtocol {

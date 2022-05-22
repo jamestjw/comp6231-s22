@@ -14,7 +14,6 @@ public class PeerDiscoveryServer implements Runnable {
     private final String repoServerAddress;
 
     private void initializeMulticast() throws IOException {
-        // TODO: Make the address a constant too
         InetAddress mcastaddr = InetAddress.getByName(multicastAddress);
         multicastSocket = new MulticastSocket(multicastPort);
         multicastSocket.joinGroup(mcastaddr);
@@ -30,13 +29,10 @@ public class PeerDiscoveryServer implements Runnable {
         initializeMulticast();
     }
 
-    //TODO: make public fucn to stop thread
-    private final boolean stop = false;
-
     public void run() {
         byte[] buffer = new byte[1024];
         try {
-            while (!stop) {
+            while (true) {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
                 try {

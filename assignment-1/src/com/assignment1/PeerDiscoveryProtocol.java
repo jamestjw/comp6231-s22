@@ -33,5 +33,5 @@ public class PeerDiscoveryProtocol {
         ex.printStackTrace();
     }
 
-    public PeerDictionary getPeerDict (){return this.peerDict;}
+    public PeerDictionary getPeerDict (){ return this.peerDict; }
 }
