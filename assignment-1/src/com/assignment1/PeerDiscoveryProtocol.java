@@ -19,7 +19,7 @@ public class PeerDiscoveryProtocol {
     }
 
     public void start() throws IOException {
-        new Thread(new PeerDiscoveryServer(MULTICAST_ADDRESS, MULTICAST_PORT, repoId, repoServerAddress, repoServerPort)).start();
+        new Thread(new PeerDiscoveryServer(MULTICAST_ADDRESS, MULTICAST_PORT, repoId, repoServerPort)).start();
 
         try {
             new Thread(new PeerSearcher(MULTICAST_ADDRESS, MULTICAST_PORT, repoId, peerDict)).start();

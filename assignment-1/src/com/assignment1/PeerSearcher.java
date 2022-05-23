@@ -68,15 +68,16 @@ public class PeerSearcher implements Runnable {
                     Logger.getInstance().reportError(e);
                     continue;
                 }
+
                 String msg = new String(request.getData(), request.getOffset(), request.getLength());
-                // Expected format: ALIVE RepoID Address Port
-                Pattern r = Pattern.compile("ALIVE\s+(\\w+)\s+(.*)\s+(\\d+)");
+                // Expected format: ALIVE RepoID Port
+                Pattern r = Pattern.compile("ALIVE\s+(\\w+)\s+(\\d+)");
                 Matcher m = r.matcher(msg);
 
                 if (m.find()) {
                     String peerID = m.group(1);
-                    String address = m.group(2);
-                    int port = Integer.parseInt(m.group(3));
+                    String address = request.getAddress().getHostAddress();
+                    int port = Integer.parseInt(m.group(2));
                     PeerDetails peerDetails = peerDict.get(peerID);
                     if (peerDetails != null) {
                         String currentAddress = peerDetails.address();

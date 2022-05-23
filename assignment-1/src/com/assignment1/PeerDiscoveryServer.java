@@ -11,7 +11,6 @@ public class PeerDiscoveryServer implements Runnable {
     private MulticastSocket multicastSocket;
     private final String repoId;
     private final int repoServerPort;
-    private final String repoServerAddress;
 
     private void initializeMulticast() throws IOException {
         InetAddress mcastaddr = InetAddress.getByName(multicastAddress);
@@ -19,12 +18,11 @@ public class PeerDiscoveryServer implements Runnable {
         multicastSocket.joinGroup(mcastaddr);
     }
 
-    PeerDiscoveryServer(String multicastAddress, int multicastPort, String repoId, String repoServerAddress, int repoServerPort) throws IOException {
+    PeerDiscoveryServer(String multicastAddress, int multicastPort, String repoId, int repoServerPort) throws IOException {
         this.repoId = repoId;
         this.multicastAddress = multicastAddress;
         this.multicastPort = multicastPort;
         this.repoServerPort = repoServerPort;
-        this.repoServerAddress = repoServerAddress;
 
         initializeMulticast();
     }
@@ -69,9 +67,8 @@ public class PeerDiscoveryServer implements Runnable {
 
     private String buildPeerDiscoveryResponse() {
         return String.format(
-                "ALIVE %s %s %d",
+                "ALIVE %s %d",
                 repoId,
-                repoServerAddress,
                 repoServerPort // TCP Port
         );
     }
