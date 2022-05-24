@@ -50,6 +50,7 @@ public class Server {
                             s.close();
                             return;
                         }
+                        System.out.println(String.format("Accepted connection from %s", s.getInetAddress().getHostName()));
                         try {
                             new Thread(()-> {
                                 try {
