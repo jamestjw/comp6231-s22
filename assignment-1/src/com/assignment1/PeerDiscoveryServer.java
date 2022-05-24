@@ -2,31 +2,26 @@ package com.assignment1;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 
 public class PeerDiscoveryServer implements Runnable {
-    private final String multicastAddress;
-    private final int multicastPort;
-    private MulticastSocket multicastSocket;
+    private DatagramSocket socket;
     private final String repoId;
     private final int repoServerPort;
-    private final String repoServerAddress;
 
-    private void initializeMulticast() throws IOException {
-        InetAddress mcastaddr = InetAddress.getByName(multicastAddress);
-        multicastSocket = new MulticastSocket(multicastPort);
-        multicastSocket.joinGroup(mcastaddr);
-    }
-
-    PeerDiscoveryServer(String multicastAddress, int multicastPort, String repoId, String repoServerAddress, int repoServerPort) throws IOException {
+    PeerDiscoveryServer(int broadcastPort, String repoId, int repoServerPort) throws IOException {
         this.repoId = repoId;
-        this.multicastAddress = multicastAddress;
-        this.multicastPort = multicastPort;
         this.repoServerPort = repoServerPort;
-        this.repoServerAddress = repoServerAddress;
 
-        initializeMulticast();
+        // https://michieldemey.be/blog/network-discovery-using-udp-broadcast/
+        InetSocketAddress addr = new InetSocketAddress("0.0.0.0", broadcastPort);
+        socket = new DatagramSocket(null);
+        socket.setBroadcast(true);
+        socket.setReuseAddress(true);
+        socket.bind(addr);
     }
 
     public void run() {
@@ -36,7 +31,7 @@ public class PeerDiscoveryServer implements Runnable {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
                 try {
-                    multicastSocket.receive(packet);
+                    socket.receive(packet);
                 } catch (Exception ex) {
                     Logger.getInstance().reportError(ex);
                 }
@@ -64,14 +59,13 @@ public class PeerDiscoveryServer implements Runnable {
         byte[] msg = buildPeerDiscoveryResponse().getBytes();
         DatagramPacket packet = new DatagramPacket(msg, msg.length,
                 ip, port);
-        multicastSocket.send(packet);
+        socket.send(packet);
     }
 
     private String buildPeerDiscoveryResponse() {
         return String.format(
-                "ALIVE %s %s %d",
+                "ALIVE %s %d",
                 repoId,
-                repoServerAddress,
                 repoServerPort // TCP Port
         );
     }
