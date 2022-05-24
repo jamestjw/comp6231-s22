@@ -28,7 +28,8 @@ public class Main {
         new Scanner(System.in).nextLine(); // waiting for EOL from the console to terminate
 
         for (int i = 0; i < SERVER_COUNT; i++) {
-            servers[i].stop();
+            if (servers[i] != null)
+                servers[i].stop();
         }
     }
 }
