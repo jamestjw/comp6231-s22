@@ -20,13 +20,8 @@ public class PeerDiscoveryProtocol {
         try {
             new Thread(new PeerSearcher(broadcastPort, repoId, peerDict)).start();
         } catch (IOException e) {
-            reportError(e);
+            Logger.getInstance().reportError(e);
         }
-    }
-    private void reportError(Exception ex) {
-        String s = ex.getMessage();
-        System.out.println(s);
-        ex.printStackTrace();
     }
 
     public PeerDictionary getPeerDict (){ return this.peerDict; }

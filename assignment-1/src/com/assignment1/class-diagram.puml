@@ -1,9 +1,8 @@
-@startuml
+@startuml Assignment 1 class diagram
 class PeerDetails {
     - address: String
     - port: int
     
-    + getAddress(): String
     + getPort(): int
 }
 
@@ -29,22 +28,16 @@ class PeerSearcher {
 
 class PeerDiscoveryServer {
     - repoId: String
-    - multicastAddress: String
-    - multicastPort: int
-    ' TODO: Need this?
-    - stop: boolean
-    - multicastSocket: MulticastSocket
+    - repoServerPort: int
+    - socket: DatagramSocket
     
-    + initializeMulticast(): void
     - reply(): void
     - buildPeerDiscoveryResponse(): String
 }
 
 class PeerDiscoveryProtocol {
-    {static} MULTICAST_ADDRESS: String
-    {static} MULTICAST_PORT: int
+    {static} BROADCAST_PORT: int
     - repoId: String
-    - peerDict: PeerDictionary
     - repoServerPort: int
 
     + start(): void
@@ -114,7 +107,6 @@ class RepositoryServer {
     - sc: ServerSocket
  
     + start(): void
-    ' TODO: Check if this is still necessary
     + stop(): void
     + getPort(): int
 }

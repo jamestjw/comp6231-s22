@@ -21,17 +21,13 @@ public class Server {
         this.repoId = id;
     }
 
-    public String getAddress() {
-        return sc.getInetAddress().getHostAddress();
-    }
-
     public int getPort() {
         return sc.getLocalPort();
     }
 
     public void start() throws IOException {
         new Thread(new MainThreadHandler()).start();
-         this.pdp = new PeerDiscoveryProtocol(repoId, getAddress(), getPort());
+         this.pdp = new PeerDiscoveryProtocol(repoId, getPort());
          pdp.start();
 
     }
