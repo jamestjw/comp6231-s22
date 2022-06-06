@@ -195,7 +195,7 @@ public class RepositoryServer {
                         break;
                     case "AVG":
                         if (args.length < 2) {
-                            sendln("Invalid arguments, expected 'DELETE <identifier> instead'");
+                            sendln("Invalid arguments, expected 'AVG <identifier> instead'");
                         } else {
                             String[] identifiers = breakdownCommandKey(args[1]);
 
@@ -208,7 +208,7 @@ public class RepositoryServer {
                         }
                         break;
 
-                        // DAVG R1.a INCLUDING R2
+                    // DAVG a INCLUDING R2
                     case "DAVG":
 
                         pattern = Pattern.compile("DAVG\\s+(.*)\\s+INCLUDING\\s+(.*)");
@@ -241,15 +241,15 @@ public class RepositoryServer {
                             }
                             // Compute Distributed AVG
                             double avg;
-                            // If key does not exist, avg is 0
-                            if(sum!=0) { // No values for key
+                            // If there are no values, then the avg is 0
+                            if(size != 0) { // No values for key
                                 avg = (double) sum / size;
-                            } else avg=0.0;
+                            } else avg = 0.0;
 
                             if (!error)
                                 sendln(String.format("OK %1$,.2f", avg));
                         } else {
-                            sendln("Expected format 'DSUM <identifier> INCLUDING <repo-1> <repo-2> ...'");
+                            sendln("Expected format 'DAVG <identifier> INCLUDING <repo-1> <repo-2> ...'");
                         }
                         break;
 
@@ -336,7 +336,7 @@ public class RepositoryServer {
                         break;
                     case "MIN":
                         if (args.length < 2) {
-                            sendln("Invalid arguments, expected 'DELETE <identifier> instead'");
+                            sendln("Invalid arguments, expected 'MIN <identifier> instead'");
                         } else {
                             String[] identifiers = breakdownCommandKey(args[1]);
 
@@ -351,7 +351,7 @@ public class RepositoryServer {
                         break;
                     case "MAX":
                         if (args.length < 2) {
-                            sendln("Invalid arguments, expected 'DELETE <identifier> instead'");
+                            sendln("Invalid arguments, expected 'MAX <identifier> instead'");
                         } else {
                             String[] identifiers = breakdownCommandKey(args[1]);
 
