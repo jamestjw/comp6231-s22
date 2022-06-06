@@ -38,11 +38,19 @@ public class Repository {
     }
 
     public synchronized Integer min(String key){
-        return Collections.min(this.get(key));
+        try {
+            return Collections.min(this.get(key));
+        } catch (java.util.NoSuchElementException e) {
+            return null;
+        }
     }
 
     public synchronized Integer max(String key){
-        return Collections.max(this.get(key));
+        try {
+            return Collections.max(this.get(key));
+        } catch (java.util.NoSuchElementException e) {
+            return null;
+        }
     }
 
     public synchronized void delete(String key) {
