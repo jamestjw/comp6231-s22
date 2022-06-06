@@ -7,12 +7,14 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.Collections;
 
 public class RepositoryServer {
     ServerSocket sc;
@@ -40,8 +42,8 @@ public class RepositoryServer {
         repo = new Repository();
 
         new Thread(new MainThreadHandler()).start();
-         this.pdp = new PeerDiscoveryProtocol(repoId, getAddress(), getPort());
-         pdp.start();
+        this.pdp = new PeerDiscoveryProtocol(repoId, getAddress(), getPort());
+        pdp.start();
 
     }
 
@@ -51,42 +53,39 @@ public class RepositoryServer {
 
     private class MainThreadHandler implements Runnable {
         public boolean stop = false;
+
         public void run() {
             try {
-                while(!stop) {
+                while (!stop) {
                     try {
                         Socket s = sc.accept(); // for non blocking see: java.nio.SocketChannel
-                        if(stop) {
+                        if (stop) {
                             s.close();
                             return;
                         }
                         try {
                             socklist.add(s);
-                            new Thread(()-> {
+                            new Thread(() -> {
                                 try {
                                     new SocketProtocol(repo, s).run();
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
                             }).start();
-                        }
-                        catch(Exception ex) {
+                        } catch (Exception ex) {
                             Logger.getInstance().reportError(ex);
                         }
-                    }
-                    catch(Exception ex) {
+                    } catch (Exception ex) {
                         Logger.getInstance().reportError(ex);
                     }
                 }
-            }
-            finally {
-                Logger.getInstance().log(String.format("Server %s stopped.",repoId));
+            } finally {
+                Logger.getInstance().log(String.format("Server %s stopped.", repoId));
             }
         }
     }
 
-    private class SocketList
-    {
+    private class SocketList {
         private final List<Socket> list = new ArrayList<>();
 
         private synchronized void add(Socket s) {
@@ -94,7 +93,7 @@ public class RepositoryServer {
         }
 
         private void close() {
-            while(true) {
+            while (true) {
                 Socket s;
                 synchronized (list) {
                     if (list.stream().count() <= 0)
@@ -103,8 +102,7 @@ public class RepositoryServer {
                 }
                 try {
                     s.close();
-                }
-                catch (Exception ex) {
+                } catch (Exception ex) {
                     Logger.getInstance().reportError(ex);
                 }
             }
@@ -124,8 +122,7 @@ public class RepositoryServer {
             try {
                 this.scanner = new Scanner(s.getInputStream());
                 this.writer = new PrintWriter(s.getOutputStream());
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 throw new RuntimeException("Socket I/O Error", ex);
             }
         }
@@ -152,12 +149,14 @@ public class RepositoryServer {
             while (isConnected()) {
                 String data = recvln();
                 String[] args = data.split("\\s+");
+                Pattern pattern;
+                Matcher m;
                 switch (args[0].toUpperCase()) {
                     case "SET":
                         if (args.length < 3) {
                             sendln("Invalid arguments, expected 'SET <identifier> <val> instead'");
                         } else {
-                            try{
+                            try {
                                 int number = Integer.parseInt(args[2]);
 
                                 String[] identifiers = breakdownCommandKey(args[1]);
@@ -168,7 +167,7 @@ public class RepositoryServer {
                                 } else {
                                     handleRemoteCommand(identifiers[1], data);
                                 }
-                            } catch (NumberFormatException ex){
+                            } catch (NumberFormatException ex) {
                                 sendln("Invalid value in SET command, expected INT value'");
                             }
                         }
@@ -178,7 +177,7 @@ public class RepositoryServer {
                         if (args.length < 3) {
                             sendln("Invalid arguments, expected 'ADD <identifier> <val> instead'");
                         } else {
-                            try{
+                            try {
                                 int number = Integer.parseInt(args[2]);
 
                                 String[] identifiers = breakdownCommandKey(args[1]);
@@ -189,16 +188,77 @@ public class RepositoryServer {
                                 } else {
                                     handleRemoteCommand(identifiers[1], data);
                                 }
-                            } catch (NumberFormatException ex){
+                            } catch (NumberFormatException ex) {
                                 sendln("Invalid value in ADD command, expected INT value'");
                             }
                         }
 
                         break;
+                    case "AVG":
+                        if (args.length < 2) {
+                            sendln("Invalid arguments, expected 'AVG <identifier> instead'");
+                        } else {
+                            String[] identifiers = breakdownCommandKey(args[1]);
+
+                            if (identifiers[1] == null || identifiers[1].equals(repoId)) {
+                                Double res = repo.avg(identifiers[0]);
+                                sendln(String.format("OK %1$,.2f", res));
+                            } else {
+                                handleRemoteCommand(identifiers[1], data);
+                            }
+                        }
+                        break;
+
+                    // DAVG a INCLUDING R2
+                    case "DAVG":
+
+                        pattern = Pattern.compile("DAVG\\s+(.*)\\s+INCLUDING\\s+(.*)");
+                        m = pattern.matcher(data);
+
+                        if (m.find()) {
+                            // identifier
+                            String k = m.group(1);
+                            int sum = repo.sum(k);
+                            int size = repo.getSize(k);
+
+                            String[] repos = m.group(2).split("\\s+");
+                            boolean error = false;
+                            CustomPair sumAndSize;
+                            for (String r : repos) {
+                                // Ignore current repo
+                                if (r.equals(repoId))
+                                    continue;
+
+                                PeerDictionary.PeerDetails details = pdp.getPeerDict().get(r);
+                                if (details != null) {
+                                    sumAndSize = remoteGetSizeAndSum(details,k);
+                                    sum += sumAndSize.getP1();
+                                    size += sumAndSize.getP2();
+                                } else {
+                                    sendln(String.format("ERR Non-existence or ambiguous repository %s", r));
+                                    error = true;
+                                    break;
+                                }
+                            }
+                            // Compute Distributed AVG
+                            double avg;
+                            // If there are no values, then the avg is 0
+                            if(size != 0) { // No values for key
+                                avg = (double) sum / size;
+                            } else avg = 0.0;
+
+                            if (!error)
+                                sendln(String.format("OK %1$,.2f", avg));
+                        } else {
+                            sendln("Expected format 'DAVG <identifier> INCLUDING <repo-1> <repo-2> ...'");
+                        }
+                        break;
+
                     case "GET":
                         if (args.length < 2) {
                             sendln("Invalid arguments, expected 'GET <identifier> instead'");
                         } else {
+                            // breakdown RepoID.key and return {key,repoID}
                             String[] identifiers = breakdownCommandKey(args[1]);
 
                             List<Integer> values = repo.get(identifiers[0]);
@@ -228,9 +288,9 @@ public class RepositoryServer {
 
                         break;
                     case "DSUM":
-                        Pattern pattern = Pattern.compile("DSUM\\s+(.*)\\s+INCLUDING\\s+(.*)");
+                        pattern = Pattern.compile("DSUM\\s+(.*)\\s+INCLUDING\\s+(.*)");
 
-                        Matcher m = pattern.matcher(data);
+                        m = pattern.matcher(data);
 
                         if (m.find()) {
                             String k = m.group(1);
@@ -238,14 +298,14 @@ public class RepositoryServer {
                             String[] repos = m.group(2).split("\\s+");
                             boolean error = false;
 
-                            for (String r: repos) {
+                            for (String r : repos) {
                                 // Ignore current repo
                                 if (r.equals(repoId))
                                     continue;
 
                                 PeerDictionary.PeerDetails details = pdp.getPeerDict().get(r);
                                 if (details != null) {
-                                    res += remoteGet(details, k);
+                                    res += remoteRetrieveSingleResult(details, k, "SUM");
                                 } else {
                                     sendln(String.format("ERR Non-existence or ambiguous repository %s", r));
                                     error = true;
@@ -275,6 +335,131 @@ public class RepositoryServer {
                         }
 
                         break;
+                    case "MIN":
+                        if (args.length < 2) {
+                            sendln("Invalid arguments, expected 'MIN <identifier> instead'");
+                        } else {
+                            String[] identifiers = breakdownCommandKey(args[1]);
+
+                            if (identifiers[1] == null || identifiers[1].equals(repoId)) {
+                                Integer res = repo.min(identifiers[0]);
+                                if (res != null)
+                                    sendln(String.format("OK %d", res));
+                                else
+                                    sendln("OK");
+                            } else {
+                                handleRemoteCommand(identifiers[1], data);
+                            }
+                        }
+
+                        break;
+                    case "MAX":
+                        if (args.length < 2) {
+                            sendln("Invalid arguments, expected 'MAX <identifier> instead'");
+                        } else {
+                            String[] identifiers = breakdownCommandKey(args[1]);
+
+                            if (identifiers[1] == null || identifiers[1].equals(repoId)) {
+                                Integer res = repo.max(identifiers[0]);
+                                if (res != null) {
+                                    sendln(String.format("OK %d", res));
+                                } else {
+                                    sendln("OK");
+                                }
+                            } else {
+                                handleRemoteCommand(identifiers[1], data);
+                            }
+                        }
+
+                        break;
+                    case "DMAX":
+                        pattern = Pattern.compile("DMAX\\s+(.*)\\s+INCLUDING\\s+(.*)");
+
+                        m = pattern.matcher(data);
+
+                        if (m.find()) {
+                            String k = m.group(1);
+                            String[] repos = m.group(2).split("\\s+");
+                            boolean error = false;
+                            ArrayList<Integer> results = new ArrayList<>(); 
+                            if (repo.max(k) != null) {
+                                results.add(repo.max(k));
+                            }
+
+                            for (String r : repos) {
+                                // Ignore current repo
+                                if (r.equals(repoId))
+                                    continue;
+
+                                PeerDictionary.PeerDetails details = pdp.getPeerDict().get(r);
+                                if (details != null) {
+                                    Integer res = remoteRetrieveSingleResult(details, k, "MAX");
+                                    if (res != null)
+                                        results.add(res);
+                                } else {
+                                    sendln(String.format("ERR Non-existence or ambiguous repository %s", r));
+                                    error = true;
+                                    break;
+                                }
+                            }
+
+                            if (!error)
+                                if (results.size() > 0) {
+                                    sendln(String.format("OK %d", Collections.max(results)));
+                                } else {
+                                    sendln("OK");
+                                }
+                        } else {
+                            sendln("Expected format 'DMAX <identifier> INCLUDING <repo-1> <repo-2> ...'");
+                        }
+
+                        break;
+                    case "DMIN":
+                        pattern = Pattern.compile("DMIN\\s+(.*)\\s+INCLUDING\\s+(.*)");
+
+                        m = pattern.matcher(data);
+
+                        if (m.find()) {
+                            String k = m.group(1);
+                            String[] repos = m.group(2).split("\\s+");
+                            boolean error = false;
+                            ArrayList<Integer> results = new ArrayList<>(); 
+                            if (repo.min(k) != null) {
+                                results.add(repo.min(k));
+                            }
+
+                            for (String r : repos) {
+                                // Ignore current repo
+                                if (r.equals(repoId))
+                                    continue;
+
+                                PeerDictionary.PeerDetails details = pdp.getPeerDict().get(r);
+                                if (details != null) {
+                                    Integer res = remoteRetrieveSingleResult(details, k, "MIN");
+                                    if (res != null)
+                                        results.add(res);
+                                } else {
+                                    sendln(String.format("ERR Non-existence or ambiguous repository %s", r));
+                                    error = true;
+                                    break;
+                                }
+                            }
+
+                            if (!error)
+                                if (results.size() > 0) {
+                                    sendln(String.format("OK %d", Collections.min(results)));
+                                } else {
+                                    sendln("OK");
+                                }
+                        } else {
+                            sendln("Expected format 'DMIN <identifier> INCLUDING <repo-1> <repo-2> ...'");
+                        }
+
+                        break;
+                    case "RESET":
+                        repo.reset();
+                        sendln("OK");
+                        break;
                     case "QUIT":
                         sendln("CIAO Arrivederci!");
                         close();
@@ -289,48 +474,77 @@ public class RepositoryServer {
         protected void handleRemoteCommand(String remoteID, String command) {
             PeerDetails remoteDetails = pdp.getPeerDict().get(remoteID);
             // Remove reference to remote repository
-            command = command.replace(remoteID+ ".", "");
+            command = command.replace(remoteID + ".", "");
 
             if (remoteDetails != null) {
                 // Forward results to user
                 sendln(
-                    new RemoteCallHandler(
-                        remoteDetails.address(),
-                        remoteDetails.port()
-                    ).runCommand(command)
+                        new RemoteCallHandler(
+                                remoteDetails.address(),
+                                remoteDetails.port()
+                        ).runCommand(command)
                 );
             } else {
                 sendln(String.format("ERR Non-existence or ambiguous repository %s", remoteID));
             }
         }
 
-        protected int remoteGet(PeerDetails remoteDetails, String key) {
+        // This method is nullable
+        protected Integer remoteRetrieveSingleResult(PeerDetails remoteDetails, String key, String cmd) {
+            // Remove reference to remote repository
+            String command = String.format("%s %s", cmd, key);
+            String remoteRes = new RemoteCallHandler(
+                    remoteDetails.address(),
+                    remoteDetails.port()
+            ).runCommand(command);
+
+            // We assume that there is a space after the OK
+            Pattern r = Pattern.compile("OK\s+(.+)");
+            Matcher m = r.matcher(remoteRes);
+
+            if (m.find()) {
+                return Integer.parseInt(m.group(1));
+            }
+            return null;
+        }
+
+        // Method to get size
+        protected CustomPair remoteGetSizeAndSum(PeerDetails remoteDetails, String key) {
             // Remove reference to remote repository
             String command = String.format("GET %s", key);
             String remoteRes = new RemoteCallHandler(
-                            remoteDetails.address(),
-                            remoteDetails.port()
-                        ).runCommand(command);
+                    remoteDetails.address(),
+                    remoteDetails.port()
+            ).runCommand(command);
 
             // We assume that there is a space after the OK
             Pattern r = Pattern.compile("OK\s+(.+)");
             Matcher m = r.matcher(remoteRes);
 
             int res = 0;
+            int totalSize = 0;
+
             if (m.find()) {
                 String[] vals = m.group(1).split(",\\s+");
 
-                for (String val: vals) {
+                for (String val : vals) {
                     res += Integer.parseInt(val);
+                    totalSize++;
                 }
             }
 
-            return res;
+            CustomPair sumAndSize = new CustomPair();
+            sumAndSize.addToP1(res);
+            sumAndSize.addToP2(totalSize);
+
+            return sumAndSize;
         }
 
         protected void sendln(String data) {
-            writer.println(data); writer.flush();
+            writer.println(data);
+            writer.flush();
         }
+
         protected String recvln() {
             try {
                 return scanner.nextLine();
@@ -339,9 +553,37 @@ public class RepositoryServer {
             }
         }
 
-        protected void close() throws IOException { s.close(); }
+        protected void close() throws IOException {
+            s.close();
+        }
 
-        protected boolean isConnected() { return s.isConnected(); }
+        protected boolean isConnected() {
+            return s.isConnected();
+        }
+    }
+
+    private static class CustomPair {
+        private Integer p1;
+        private Integer p2;
+        public CustomPair(){
+            p1 = 0;
+            p2 = 0;
+        }
+        public Integer getP1() {
+            return this.p1;
+        }
+
+        public Integer getP2() {
+            return this.p2;
+        }
+
+        public void addToP1(Integer value) {
+            p1 += value;
+        }
+
+        public void addToP2(Integer value) {
+            p2 += value;
+        }
     }
 
     private static class RemoteCallHandler {
@@ -354,15 +596,16 @@ public class RepositoryServer {
                 Socket s = new Socket(address, port);
                 this.scanner = new Scanner(s.getInputStream());
                 this.writer = new PrintWriter(s.getOutputStream());
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 throw new RuntimeException("Socket I/O Error", ex);
             }
         }
 
         protected void sendln(String data) {
-            writer.println(data); writer.flush();
+            writer.println(data);
+            writer.flush();
         }
+
         protected String recvln() {
             return scanner.nextLine();
         }

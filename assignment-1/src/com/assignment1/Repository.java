@@ -32,6 +32,27 @@ public class Repository {
         return data.getOrDefault(key, Collections.emptyList());
     }
 
+    // Return average from list of values for specified list
+    public synchronized Double avg(String key){
+       return this.get(key).stream().mapToInt(val -> val).average().orElse(0.0);
+    }
+
+    public synchronized Integer min(String key){
+        try {
+            return Collections.min(this.get(key));
+        } catch (java.util.NoSuchElementException e) {
+            return null;
+        }
+    }
+
+    public synchronized Integer max(String key){
+        try {
+            return Collections.max(this.get(key));
+        } catch (java.util.NoSuchElementException e) {
+            return null;
+        }
+    }
+
     public synchronized void delete(String key) {
         data.remove(key);
     }
@@ -39,5 +60,13 @@ public class Repository {
     public synchronized Integer sum(String key) {
         List<Integer> l = this.get(key);
         return l.stream().reduce(0, Integer::sum);
+    }
+    public synchronized Integer getSize(String key) {
+        List<Integer> l = this.get(key);
+        return l.size();
+    }
+
+    public synchronized void reset() {
+        this.data = new HashMap<>();
     }
 }
