@@ -231,7 +231,7 @@ public class RepositoryServer {
 
                                 PeerDictionary.PeerDetails details = pdp.getPeerDict().get(r);
                                 if (details != null) {
-                                    sumAndSize = remoteGetSizeAndSumResultSizeAndSum(details,k);
+                                    sumAndSize = remoteGetSizeAndSum(details,k);
                                     sum += sumAndSize.getP1();
                                     size += sumAndSize.getP2();
                                 } else {
@@ -305,7 +305,7 @@ public class RepositoryServer {
 
                                 PeerDictionary.PeerDetails details = pdp.getPeerDict().get(r);
                                 if (details != null) {
-                                    res += remoteGetSizeAndSumResult(details, k, "SUM");
+                                    res += remoteRetrieveSingleResult(details, k, "SUM");
                                 } else {
                                     sendln(String.format("ERR Non-existence or ambiguous repository %s", r));
                                     error = true;
@@ -342,8 +342,11 @@ public class RepositoryServer {
                             String[] identifiers = breakdownCommandKey(args[1]);
 
                             if (identifiers[1] == null || identifiers[1].equals(repoId)) {
-                                int res = repo.min(identifiers[0]);
-                                sendln(String.format("OK %d", res));
+                                Integer res = repo.min(identifiers[0]);
+                                if (res != null)
+                                    sendln(String.format("OK %d", res));
+                                else
+                                    sendln("OK");
                             } else {
                                 handleRemoteCommand(identifiers[1], data);
                             }
@@ -390,7 +393,7 @@ public class RepositoryServer {
 
                                 PeerDictionary.PeerDetails details = pdp.getPeerDict().get(r);
                                 if (details != null) {
-                                    Integer res = remoteGetSizeAndSumResult(details, k, "MAX");
+                                    Integer res = remoteRetrieveSingleResult(details, k, "MAX");
                                     if (res != null)
                                         results.add(res);
                                 } else {
@@ -408,6 +411,48 @@ public class RepositoryServer {
                                 }
                         } else {
                             sendln("Expected format 'DMAX <identifier> INCLUDING <repo-1> <repo-2> ...'");
+                        }
+
+                        break;
+                    case "DMIN":
+                        pattern = Pattern.compile("DMIN\\s+(.*)\\s+INCLUDING\\s+(.*)");
+
+                        m = pattern.matcher(data);
+
+                        if (m.find()) {
+                            String k = m.group(1);
+                            String[] repos = m.group(2).split("\\s+");
+                            boolean error = false;
+                            ArrayList<Integer> results = new ArrayList<>(); 
+                            if (repo.min(k) != null) {
+                                results.add(repo.min(k));
+                            }
+
+                            for (String r : repos) {
+                                // Ignore current repo
+                                if (r.equals(repoId))
+                                    continue;
+
+                                PeerDictionary.PeerDetails details = pdp.getPeerDict().get(r);
+                                if (details != null) {
+                                    Integer res = remoteRetrieveSingleResult(details, k, "MIN");
+                                    if (res != null)
+                                        results.add(res);
+                                } else {
+                                    sendln(String.format("ERR Non-existence or ambiguous repository %s", r));
+                                    error = true;
+                                    break;
+                                }
+                            }
+
+                            if (!error)
+                                if (results.size() > 0) {
+                                    sendln(String.format("OK %d", Collections.min(results)));
+                                } else {
+                                    sendln("OK");
+                                }
+                        } else {
+                            sendln("Expected format 'DMIN <identifier> INCLUDING <repo-1> <repo-2> ...'");
                         }
 
                         break;
@@ -441,7 +486,7 @@ public class RepositoryServer {
         }
 
         // This method is nullable
-        protected Integer remoteGetSizeAndSumResult(PeerDetails remoteDetails, String key, String cmd) {
+        protected Integer remoteRetrieveSingleResult(PeerDetails remoteDetails, String key, String cmd) {
             // Remove reference to remote repository
             String command = String.format("%s %s", cmd, key);
             String remoteRes = new RemoteCallHandler(
@@ -460,7 +505,7 @@ public class RepositoryServer {
         }
 
         // Method to get size
-        protected CustomPair remoteGetSizeAndSumResultSizeAndSum(PeerDetails remoteDetails, String key) {
+        protected CustomPair remoteGetSizeAndSum(PeerDetails remoteDetails, String key) {
             // Remove reference to remote repository
             String command = String.format("GET %s", key);
             String remoteRes = new RemoteCallHandler(
