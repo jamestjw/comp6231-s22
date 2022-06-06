@@ -65,4 +65,8 @@ public class Repository {
         List<Integer> l = this.get(key);
         return l.size();
     }
+
+    public synchronized void reset() {
+        this.data = new HashMap<>();
+    }
 }

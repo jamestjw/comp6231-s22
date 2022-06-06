@@ -3,5 +3,10 @@ DELETE b
 ADD a 13
 GET a
 SUM a
+AVG a
+MIN a
+MAX a
 SET a 10
+GET a
+RESET a
 GET a

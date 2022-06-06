@@ -58,8 +58,8 @@ class Repository {
     + avg(): Double
     + min(): Integer
     + max(): Integer
+    + reset(): void
     + getSize(): Integer
-
 }
 
 class SocketList {
@@ -79,7 +79,8 @@ class RepositoryProtocol {
     + run(): void
     - breakdownCommandKey(): String[]
     - handleRemoteCommand(): void
-    - remoteGet(): int
+    - remoteRetrieveSingleResult(): Integer
+    - remoteGetSizeAndSum(): CustomPair
     - sendln(): void
     - recvln(): String
     - close(): void

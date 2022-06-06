@@ -456,6 +456,10 @@ public class RepositoryServer {
                         }
 
                         break;
+                    case "RESET":
+                        repo.reset();
+                        sendln("OK");
+                        break;
                     case "QUIT":
                         sendln("CIAO Arrivederci!");
                         close();
