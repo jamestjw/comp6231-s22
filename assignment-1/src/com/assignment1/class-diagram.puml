@@ -55,6 +55,11 @@ class Repository {
     + get(): List<Integer>
     + delete(): void
     + sum(): Integer
+    + avg(): Double
+    + min(): Integer
+    + max(): Integer
+    + getSize(): Integer
+
 }
 
 class SocketList {
@@ -92,6 +97,18 @@ class RemoteCallHandler {
 }
 
 RepositoryProtocol -- RemoteCallHandler
+
+class CustomPair{
+    - p1: int
+    - p2: int
+
+    + getP1(): int
+    + getP2(): int
+    + addToP1(): void
+    + addToP2(): void
+}
+
+RepositoryProtocol -- CustomPair
 
 class MainThreadHandler {
     - stop: boolean
