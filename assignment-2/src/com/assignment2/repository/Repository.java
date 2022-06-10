@@ -1,6 +1,5 @@
 package com.assignment2.repository;
 
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -8,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.assignment2.core.IDistributedRepository;
+import com.assignment2.core.RepException;
 
 public class Repository implements IDistributedRepository {
     HashMap<String, List<Integer>> data;
@@ -17,12 +17,12 @@ public class Repository implements IDistributedRepository {
     }
 
     @Override
-    public void set(String key, Integer value) throws RemoteException {
+    public void set(String key, Integer value) throws RepException {
         this.data.put(key, new ArrayList<>(Arrays.asList(value)));
     }
 
     @Override
-    public void add(String key, Integer value) throws RemoteException {
+    public void add(String key, Integer value) throws RepException {
         List<Integer> l = data.get(key);
 
         if (l != null)
@@ -34,33 +34,33 @@ public class Repository implements IDistributedRepository {
     }
 
     @Override
-    public List<Integer> get(String key) throws RemoteException {
+    public List<Integer> get(String key) throws RepException {
         return data.getOrDefault(key, Collections.emptyList());
     }
 
     @Override
-    public void delete(String key) throws RemoteException {
+    public void delete(String key) throws RepException {
         data.remove(key);
     }
 
     @Override
-    public Integer getSize(String key) throws RemoteException {
+    public Integer getSize(String key) throws RepException {
         List<Integer> l = this.get(key);
         return l.size();
     }
 
     @Override
-    public void reset() throws RemoteException {
+    public void reset() throws RepException {
         this.data = new HashMap<>();
     }
 
     @Override
-    public Double avg(String key) throws RemoteException {
+    public Double avg(String key) throws RepException {
         return this.get(key).stream().mapToInt(val -> val).average().orElse(0.0);
     }
 
     @Override
-    public Integer min(String key) throws RemoteException {
+    public Integer min(String key) throws RepException {
         try {
             return Collections.min(this.get(key));
         } catch (java.util.NoSuchElementException e) {
@@ -69,13 +69,13 @@ public class Repository implements IDistributedRepository {
     }
 
     @Override
-    public Integer max(String key) throws RemoteException {
+    public Integer max(String key) throws RepException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Integer sum(String key) throws RemoteException {
+    public Integer sum(String key) throws RepException {
         try {
             return Collections.max(this.get(key));
         } catch (java.util.NoSuchElementException e) {
@@ -84,25 +84,25 @@ public class Repository implements IDistributedRepository {
     }
 
     @Override
-    public Integer dsum(String[] repids) throws RemoteException {
+    public Integer dsum(String[] repids) throws RepException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Integer dmin(String[] repids) throws RemoteException {
+    public Integer dmin(String[] repids) throws RepException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Integer dmax(String[] repids) throws RemoteException {
+    public Integer dmax(String[] repids) throws RepException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Double davg(String[] repids) throws RemoteException {
+    public Double davg(String[] repids) throws RepException {
         // TODO Auto-generated method stub
         return null;
     }
