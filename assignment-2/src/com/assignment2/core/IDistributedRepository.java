@@ -1,7 +1,7 @@
 package com.assignment2.core;
 
 public interface IDistributedRepository extends IRepository {
-    public Integer dsum(String[] repids) throws RepException;
+    public Integer dsum(String key, String[] repids) throws RepException;
 
     public Integer dmin(String[] repids) throws RepException;
 

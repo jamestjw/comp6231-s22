@@ -6,14 +6,19 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import com.assignment2.core.Connector;
+import com.assignment2.core.IDirectory;
 import com.assignment2.core.IDistributedRepository;
+import com.assignment2.core.IRepository;
 import com.assignment2.core.RepException;
 
 public class Repository implements IDistributedRepository {
     HashMap<String, List<Integer>> data;
+    String id;
 
-    public Repository() {
+    public Repository(String id) {
         this.data = new HashMap<>();
+        this.id = id;
     }
 
     @Override
@@ -84,9 +89,15 @@ public class Repository implements IDistributedRepository {
     }
 
     @Override
-    public Integer dsum(String[] repids) throws RepException {
-        // TODO Auto-generated method stub
-        return null;
+    public Integer dsum(String key, String[] repids) throws RepException {
+        Integer sum = sum(key);
+        IDirectory directory = Connector.getDirectory(Connector.getDirectoryURI(id));
+
+        for (String repId: repids) {
+            IRepository remoteRepo = directory.find(repId);
+            sum += remoteRepo.sum(key);
+        }
+        return sum;
     }
 
     @Override

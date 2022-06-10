@@ -15,7 +15,7 @@ public class Registry implements IRegistry {
     @Override
     public IRepository find(String id) throws RepException {
         try {
-            return Connector.getRepository(id);
+            return Connector.getRepository(Connector.getRepositoryURI(id));
         } catch (Exception e) {
             throw new RepException(e);
         }

@@ -6,6 +6,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 
 public class Connector {
+    static final int PORT_NUMBER = 6231;
+
     static public IRepository getRepository(String uri)
             throws RepException {
         try {
@@ -32,5 +34,17 @@ public class Connector {
         } catch (MalformedURLException | RemoteException | NotBoundException e) {
             throw new RepException(e);
         }
+    }
+
+    static public String getDirectoryURI(String objectID) {
+        return String.format("rmi://localhost:%d/%s_DIRECTORY", PORT_NUMBER, objectID);
+    }
+
+    static public String getRegistryURI(String objectID) {
+        return String.format("rmi://localhost:%d/%s_REGISTRY", PORT_NUMBER, objectID);
+    }
+
+    static public String getRepositoryURI(String objectID) {
+        return String.format("rmi://localhost:%d/%s_REPOSITORY", PORT_NUMBER, objectID);
     }
 }
