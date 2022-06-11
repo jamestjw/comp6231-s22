@@ -22,7 +22,7 @@ public class RepositoryService {
             LocateRegistry.createRegistry(Connector.PORT_NUMBER);
 
             // Construct remote registry for repository
-            Registry exportedRegistry = new Registry();
+            Registry exportedRegistry = new Registry(id);
             String registryURI = Connector.getRegistryURI(id);
             Naming.rebind(registryURI, exportedRegistry);
             System.out.println(String.format("Remote registry for %s is ready", id));

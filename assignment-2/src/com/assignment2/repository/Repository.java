@@ -23,12 +23,12 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public void set(String key, Integer value) {
+    public synchronized void set(String key, Integer value) {
         this.data.put(key, new ArrayList<>(Arrays.asList(value)));
     }
 
     @Override
-    public void add(String key, Integer value) {
+    public synchronized void add(String key, Integer value) {
         List<Integer> l = data.get(key);
 
         if (l != null) {
@@ -40,33 +40,33 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public List<Integer> get(String key) {
+    public synchronized List<Integer> get(String key) {
         return data.getOrDefault(key, Collections.emptyList());
     }
 
     @Override
-    public void delete(String key) {
+    public synchronized void delete(String key) {
         data.remove(key);
     }
 
     @Override
-    public Integer getSize(String key) {
+    public synchronized Integer getSize(String key) {
         List<Integer> l = this.get(key);
         return l.size();
     }
 
     @Override
-    public void reset() {
+    public synchronized void reset() {
         this.data = new HashMap<>();
     }
 
     @Override
-    public Double avg(String key) {
+    public synchronized Double avg(String key) {
         return this.get(key).stream().mapToInt(val -> val).average().orElse(0.0);
     }
 
     @Override
-    public Integer min(String key) {
+    public synchronized Integer min(String key) {
         try {
             return Collections.min(this.get(key));
         } catch (java.util.NoSuchElementException e) {
@@ -75,7 +75,7 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public Integer max(String key) {
+    public synchronized Integer max(String key) {
         try {
             return Collections.max(this.get(key));
         } catch (java.util.NoSuchElementException e) {
@@ -84,7 +84,7 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public Integer sum(String key) {
+    public synchronized Integer sum(String key) {
         List<Integer> l = this.get(key);
         return l.stream().reduce(0, Integer::sum);
     }

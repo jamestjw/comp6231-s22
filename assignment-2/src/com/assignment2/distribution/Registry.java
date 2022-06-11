@@ -10,15 +10,17 @@ import com.assignment2.core.IRepository;
 import com.assignment2.core.RepException;
 
 public class Registry extends UnicastRemoteObject implements IRegistry {
+    String id; // ID that belongs to the Repo that owns this Registry
     // Key: Server ID
     // Value: RMI ID
     HashMap<String, String> servers = new HashMap<>();
 
-    public Registry() throws RemoteException {
+    public Registry(String id) throws RemoteException {
+        this.id = id;
     }
 
     @Override
-    public IRepository find(String id) throws RemoteException {
+    public synchronized IRepository find(String id) throws RemoteException {
         try {
             return Connector.getRepository(Connector.getRepositoryURI(id));
         } catch (Exception e) {
@@ -27,17 +29,17 @@ public class Registry extends UnicastRemoteObject implements IRegistry {
     }
 
     @Override
-    public String[] list() throws RemoteException {
+    public synchronized String[] list() throws RemoteException {
         return (String[]) servers.keySet().toArray();
     }
 
     @Override
-    public void register(String id, String uri) throws RemoteException {
+    public synchronized void register(String id, String uri) throws RemoteException {
         this.servers.put(id, uri);
     }
 
     @Override
-    public void unregister(String id) throws RemoteException {
+    public synchronized void unregister(String id) throws RemoteException {
         servers.remove(id);
     }
 }
