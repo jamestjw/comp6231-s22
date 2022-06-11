@@ -37,7 +37,8 @@ public class Connector {
     }
 
     static public String getDirectoryURI(String objectID) {
-        return String.format("rmi://localhost:%d/%s_DIRECTORY", PORT_NUMBER, objectID);
+        return getRegistryURI(objectID);
+        // return String.format("rmi://localhost:%d/%s_DIRECTORY", PORT_NUMBER, objectID);
     }
 
     static public String getRegistryURI(String objectID) {

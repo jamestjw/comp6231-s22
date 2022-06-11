@@ -1,5 +1,7 @@
 package com.assignment2.repository;
 
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -12,11 +14,11 @@ import com.assignment2.core.IDistributedRepository;
 import com.assignment2.core.IRepository;
 import com.assignment2.core.RepException;
 
-public class Repository implements IDistributedRepository {
+public class Repository extends UnicastRemoteObject implements IDistributedRepository {
     HashMap<String, List<Integer>> data;
     String id;
 
-    public Repository(String id) {
+    public Repository(String id) throws RemoteException {
         this.data = new HashMap<>();
         this.id = id;
     }
