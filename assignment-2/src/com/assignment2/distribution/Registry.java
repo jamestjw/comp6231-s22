@@ -36,12 +36,7 @@ public class Registry extends UnicastRemoteObject implements IRegistry {
 
     @Override
     public void register(String repoID, String uri) throws RemoteException {
-        if (servers.containsKey(repoID)) {
-            System.out.println(String.format("<Registry %s> Registering already known server %s", this.id, repoID));
-            // We assume that if we have already added this server previously, then we can
-            // assume
-            // that we have already passed on the information to other servers.
-        } else {
+        if (!servers.containsKey(repoID)) {
             System.out.println(String.format("<Registry %s> Registered %s URI: %s", this.id, repoID, uri));
             addServer(repoID, uri);
 
@@ -62,8 +57,23 @@ public class Registry extends UnicastRemoteObject implements IRegistry {
     }
 
     @Override
-    public synchronized void unregister(String repoID) throws RemoteException {
-        System.out.println(String.format("<Registry %s> Unregistered %s", this.id, repoID));
+    public void unregister(String repoID) throws RemoteException {
+        if (servers.containsKey(repoID)) {
+            deleteServer(repoID);
+            System.out.println(String.format("<Registry %s> Unregistered %s", this.id, repoID));
+
+            // Spread the information
+            for (Entry<String, String> entry : servers.entrySet()) {
+                String key = entry.getKey();
+
+                if (!key.equals(this.id) && !key.equals(repoID)) {
+                    Connector.getRegistryByID(key).unregister(repoID);
+                }
+            }
+        }
+    }
+
+    private synchronized void deleteServer(String repoID) {
         servers.remove(repoID);
     }
 

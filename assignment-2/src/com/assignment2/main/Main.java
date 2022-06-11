@@ -2,6 +2,8 @@ package com.assignment2.main;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
+import java.util.ArrayList;
+import java.util.Scanner;
 
 import com.assignment2.core.Connector;
 import com.assignment2.core.RepException;
@@ -13,22 +15,31 @@ public class Main {
         LocateRegistry.createRegistry(Connector.PORT_NUMBER);
 
         String[] ids = { "R1", "R2", "R3", "R4", "R5" };
+        ArrayList<RepositoryService> services = new ArrayList<>();
+
         String knownRepoID = null;
         for (String id : ids) {
-            startRepo(id, knownRepoID);
+            services.add(startRepo(id, knownRepoID));
             if (knownRepoID == null)
                 knownRepoID = id;
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            for (RepositoryService service : services)
+                try {
+                    service.stop();
+                } catch (RepException e) {
+                    System.err.println(e.getMessage());
+                } 
+        }));
     }
 
-    public static void startRepo(String currentRepoID, String knownRepoID) {
+    public static RepositoryService startRepo(String currentRepoID, String knownRepoID) throws RepException {
         System.out.println(String.format("Starting server %s using knownRepoID %s", currentRepoID, knownRepoID));
 
         RepositoryService repositoryService = new RepositoryService(currentRepoID);
-        try {
-            repositoryService.start(knownRepoID);
-        } catch (RepException e) {
-            System.err.println(String.format("Failed to start server %s: %s", currentRepoID, e.getMessage()));
-        }
+        repositoryService.start(knownRepoID);
+
+        return repositoryService;
     }
 }
