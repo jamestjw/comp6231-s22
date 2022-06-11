@@ -10,32 +10,59 @@ import com.assignment2.core.IDistributedRepository;
 public class Client {
     public static void main(String[] argv) throws Exception {
         try {
-            IDistributedRepository repo = Connector.getRepositoryByID("R1");
+            IDistributedRepository r1 = Connector.getRepositoryByID("R1");
+            IDistributedRepository r2 = Connector.getRepositoryByID("R2");
+            IDistributedRepository r3 = Connector.getRepositoryByID("R3");
+
             String[] emptyArray = {};
 
-            repo.reset();
-            assert_eq(repo.get("A"), Collections.emptyList());
+            r1.reset();
+            assert_eq(r1.get("A"), Collections.emptyList());
 
-            repo.set("A", 5);
-            assert_eq(repo.get("A"), Collections.singletonList(5));
+            r1.set("A", 5);
+            assert_eq(r1.get("A"), Collections.singletonList(5));
 
-            repo.add("A", 2);
-            assert_eq(repo.get("A"), List.of(5, 2));
-            assert_eq(repo.sum("A"), 7);
-            assert_eq(repo.dsum("A", emptyArray), 7);
+            r1.add("A", 2);
+            assert_eq(r1.get("A"), List.of(5, 2));
+            assert_eq(r1.sum("A"), 7);
+            assert_eq(r1.dsum("A", emptyArray), 7);
 
-            assert_eq(repo.max("A"), 5);
-            assert_eq(repo.min("A"), 2);
-            assert_eq(repo.avg("A"), 3.5);
+            assert_eq(r1.max("A"), 5);
+            assert_eq(r1.min("A"), 2);
+            assert_eq(r1.avg("A"), 3.5);
 
-            assert_eq(repo.max("B"), null);
-            assert_eq(repo.min("B"), null);
-            assert_eq(repo.avg("B"), 0.0);
+            assert_eq(r1.max("B"), null);
+            assert_eq(r1.min("B"), null);
+            assert_eq(r1.avg("B"), 0.0);
 
-            repo.delete("A");
-            assert_eq(repo.get("A"), Collections.emptyList());
+            r1.delete("A");
+            assert_eq(r1.get("A"), Collections.emptyList());
 
-            System.out.println("All tests passed.");
+            System.out.println("Single repo tests passed.");
+
+            r1.reset();
+            r2.reset();
+            r3.reset();
+            r1.add("A", 10);
+            r2.add("A", 20);
+            r3.add("A", 30);
+            assert_eq(r1.dsum("A", new String[] { "R2", "R3" }), 60);
+            assert_eq(r2.dsum("A", new String[] { "R1", "R3" }), 60);
+            assert_eq(r3.dsum("A", new String[] { "R1", "R2" }), 60);
+
+            assert_eq(r1.dmin("A", new String[] { "R2", "R3" }), 10);
+            assert_eq(r2.dmin("A", new String[] { "R1", "R3" }), 10);
+            assert_eq(r3.dmin("A", new String[] { "R1", "R2" }), 10);
+            
+            assert_eq(r1.dmax("A", new String[] { "R2", "R3" }), 30);
+            assert_eq(r2.dmax("A", new String[] { "R1", "R3" }), 30);
+            assert_eq(r3.dmax("A", new String[] { "R1", "R2" }), 30);
+
+            assert_eq(r1.davg("A", new String[] { "R2", "R3" }), 20.0);
+            assert_eq(r2.davg("A", new String[] { "R1", "R3" }), 20.0);
+            assert_eq(r3.davg("A", new String[] { "R1", "R2" }), 20.0);
+
+            System.out.println("Multi repo tests passed.");
         } catch (RemoteException e) {
             System.err.println("Unable to connect to repo R1: " + e.getMessage());
         }

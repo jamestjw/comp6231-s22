@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.OptionalDouble;
 
 import com.assignment2.core.Connector;
 import com.assignment2.core.IDirectory;
@@ -102,20 +103,52 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public Integer dmin(String[] repids) throws RemoteException {
-        // TODO Auto-generated method stub
-        return null;
+    public Integer dmin(String key, String[] repids) throws RemoteException {
+        Integer currentMin = min(key);
+        IDirectory directory = Connector.getDirectory(Connector.getDirectoryURI(id));
+
+        for (String repId : repids) {
+            IRepository remoteRepo = directory.find(repId);
+            Integer remoteMin = remoteRepo.min(key);
+
+            if (currentMin != null && remoteMin != null && remoteMin < currentMin) {
+                currentMin = remoteMin;
+            }
+        }
+
+        return currentMin;
     }
 
     @Override
-    public Integer dmax(String[] repids) throws RemoteException {
-        // TODO Auto-generated method stub
-        return null;
+    public Integer dmax(String key, String[] repids) throws RemoteException {
+        Integer currentMax = max(key);
+        IDirectory directory = Connector.getDirectory(Connector.getDirectoryURI(id));
+
+        for (String repId : repids) {
+            IRepository remoteRepo = directory.find(repId);
+            Integer remoteMax = remoteRepo.max(key);
+
+            if (currentMax != null && remoteMax != null && remoteMax > currentMax) {
+                currentMax = remoteMax;
+            }
+        }
+
+        return currentMax;
     }
 
     @Override
-    public Double davg(String[] repids) throws RemoteException {
-        // TODO Auto-generated method stub
-        return null;
+    public Double davg(String key, String[] repids) throws RemoteException {
+        ArrayList<Integer> values = new ArrayList<Integer>(get(key));
+        IDirectory directory = Connector.getDirectory(Connector.getDirectoryURI(id));
+
+        for (String repId : repids) {
+            IRepository remoteRepo = directory.find(repId);
+            values.addAll(remoteRepo.get(key));
+        }
+
+        return values.stream()
+                .mapToDouble(a -> a)
+                .average()
+                .orElse(0.0);
     }
 }
