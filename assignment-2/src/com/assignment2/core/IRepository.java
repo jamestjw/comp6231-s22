@@ -10,9 +10,9 @@ public interface IRepository extends IAggregate {
 
     public List<Integer> get(String key) throws RemoteException;
 
-    public void delete(String key) throws RemoteException;
+    public List<String> ls() throws RemoteException;
 
-    public Integer getSize(String key) throws RemoteException;
+    public void delete(String key) throws RemoteException;
 
     public void reset() throws RemoteException;
 }

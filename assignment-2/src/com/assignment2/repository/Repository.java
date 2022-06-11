@@ -51,12 +51,6 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public synchronized Integer getSize(String key) {
-        List<Integer> l = this.get(key);
-        return l.size();
-    }
-
-    @Override
     public synchronized void reset() {
         this.data = new HashMap<>();
     }
@@ -150,5 +144,10 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
                 .mapToDouble(a -> a)
                 .average()
                 .orElse(0.0);
+    }
+
+    @Override
+    public List<String> ls() throws RemoteException {
+        return new ArrayList<>(data.keySet());
     }
 }

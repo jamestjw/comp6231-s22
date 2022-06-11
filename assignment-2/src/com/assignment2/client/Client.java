@@ -35,6 +35,9 @@ public class Client {
             assert_eq(r1.min("B"), null);
             assert_eq(r1.avg("B"), 0.0);
 
+            r1.add("B", 10);
+            assert_eq(r1.ls(), List.of("A", "B")); 
+
             r1.delete("A");
             assert_eq(r1.get("A"), Collections.emptyList());
 
