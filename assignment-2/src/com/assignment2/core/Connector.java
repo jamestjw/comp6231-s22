@@ -8,14 +8,20 @@ import java.rmi.RemoteException;
 public class Connector {
     public static final int PORT_NUMBER = 1099;
 
-    static public IRepository getRepository(String uri)
+    static public IDistributedRepository getRepository(String uri)
             throws RepException {
         try {
-            return (IRepository) Naming.lookup(uri);
+            return (IDistributedRepository) Naming.lookup(uri);
         } catch (MalformedURLException | RemoteException | NotBoundException e) {
             throw new RepException(e);
         }
     }
+
+    static public IDistributedRepository getRepositoryByID(String id)
+            throws RepException {
+       return getRepository(getRepositoryURI(id));
+    }
+
 
     static public IRegistry getRegistry(String uri)
             throws RepException {

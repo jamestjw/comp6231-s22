@@ -32,9 +32,9 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     public void add(String key, Integer value) {
         List<Integer> l = data.get(key);
 
-        if (l != null)
+        if (l != null) {
             l.add(value);
-        else {
+        } else {
             l = new ArrayList<>(Arrays.asList(value));
             this.data.put(key, l);
         }
@@ -77,12 +77,6 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
 
     @Override
     public Integer max(String key) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Integer sum(String key) {
         try {
             return Collections.max(this.get(key));
         } catch (java.util.NoSuchElementException e) {
@@ -91,11 +85,17 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
+    public Integer sum(String key) {
+        List<Integer> l = this.get(key);
+        return l.stream().reduce(0, Integer::sum);
+    }
+
+    @Override
     public Integer dsum(String key, String[] repids) throws RemoteException {
         Integer sum = sum(key);
         IDirectory directory = Connector.getDirectory(Connector.getDirectoryURI(id));
 
-        for (String repId: repids) {
+        for (String repId : repids) {
             IRepository remoteRepo = directory.find(repId);
             sum += remoteRepo.sum(key);
         }
