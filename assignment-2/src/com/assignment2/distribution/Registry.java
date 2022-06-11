@@ -1,5 +1,6 @@
 package com.assignment2.distribution;
 
+import java.rmi.RemoteException;
 import java.util.HashMap;
 
 import com.assignment2.core.Connector;
@@ -13,7 +14,7 @@ public class Registry implements IRegistry {
     HashMap<String, String> servers;
 
     @Override
-    public IRepository find(String id) throws RepException {
+    public IRepository find(String id) throws RemoteException {
         try {
             return Connector.getRepository(Connector.getRepositoryURI(id));
         } catch (Exception e) {
@@ -22,17 +23,17 @@ public class Registry implements IRegistry {
     }
 
     @Override
-    public String[] list() throws RepException {
+    public String[] list() throws RemoteException {
         return (String[]) servers.keySet().toArray();
     }
 
     @Override
-    public void register(String id, String uri) throws RepException {
+    public void register(String id, String uri) throws RemoteException {
         this.servers.put(id, uri);
     }
 
     @Override
-    public void unregister(String id) throws RepException {
+    public void unregister(String id) throws RemoteException {
         servers.remove(id);
     }
 }

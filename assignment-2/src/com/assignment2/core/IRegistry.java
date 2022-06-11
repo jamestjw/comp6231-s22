@@ -1,7 +1,9 @@
 package com.assignment2.core;
 
-public interface IRegistry extends IDirectory {
-    public void register(String id, String uri) throws RepException;
+import java.rmi.RemoteException;
 
-    public void unregister(String id) throws RepException;
+public interface IRegistry extends IDirectory {
+    public void register(String id, String uri) throws RemoteException;
+
+    public void unregister(String id) throws RemoteException;
 }

@@ -1,6 +1,8 @@
 package com.assignment2.core;
 
-public class RepException extends Exception {
+import java.rmi.RemoteException;
+
+public class RepException extends RemoteException {
   public RepException(Exception e) {
       super(e.getMessage());
   }  

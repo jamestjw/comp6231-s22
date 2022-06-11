@@ -6,7 +6,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 
 public class Connector {
-    static final int PORT_NUMBER = 6231;
+    public static final int PORT_NUMBER = 1099;
 
     static public IRepository getRepository(String uri)
             throws RepException {

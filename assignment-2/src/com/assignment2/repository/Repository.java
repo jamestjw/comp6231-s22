@@ -24,12 +24,12 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public void set(String key, Integer value) throws RepException {
+    public void set(String key, Integer value) {
         this.data.put(key, new ArrayList<>(Arrays.asList(value)));
     }
 
     @Override
-    public void add(String key, Integer value) throws RepException {
+    public void add(String key, Integer value) {
         List<Integer> l = data.get(key);
 
         if (l != null)
@@ -41,33 +41,33 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public List<Integer> get(String key) throws RepException {
+    public List<Integer> get(String key) {
         return data.getOrDefault(key, Collections.emptyList());
     }
 
     @Override
-    public void delete(String key) throws RepException {
+    public void delete(String key) {
         data.remove(key);
     }
 
     @Override
-    public Integer getSize(String key) throws RepException {
+    public Integer getSize(String key) {
         List<Integer> l = this.get(key);
         return l.size();
     }
 
     @Override
-    public void reset() throws RepException {
+    public void reset() {
         this.data = new HashMap<>();
     }
 
     @Override
-    public Double avg(String key) throws RepException {
+    public Double avg(String key) {
         return this.get(key).stream().mapToInt(val -> val).average().orElse(0.0);
     }
 
     @Override
-    public Integer min(String key) throws RepException {
+    public Integer min(String key) {
         try {
             return Collections.min(this.get(key));
         } catch (java.util.NoSuchElementException e) {
@@ -76,13 +76,13 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public Integer max(String key) throws RepException {
+    public Integer max(String key) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Integer sum(String key) throws RepException {
+    public Integer sum(String key) {
         try {
             return Collections.max(this.get(key));
         } catch (java.util.NoSuchElementException e) {
@@ -91,7 +91,7 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public Integer dsum(String key, String[] repids) throws RepException {
+    public Integer dsum(String key, String[] repids) throws RemoteException {
         Integer sum = sum(key);
         IDirectory directory = Connector.getDirectory(Connector.getDirectoryURI(id));
 
@@ -103,19 +103,19 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     }
 
     @Override
-    public Integer dmin(String[] repids) throws RepException {
+    public Integer dmin(String[] repids) throws RemoteException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Integer dmax(String[] repids) throws RepException {
+    public Integer dmax(String[] repids) throws RemoteException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Double davg(String[] repids) throws RepException {
+    public Double davg(String[] repids) throws RemoteException {
         // TODO Auto-generated method stub
         return null;
     }
