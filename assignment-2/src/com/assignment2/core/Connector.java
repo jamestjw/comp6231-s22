@@ -19,9 +19,13 @@ public class Connector {
 
     static public IDistributedRepository getRepositoryByID(String id)
             throws RepException {
-       return getRepository(getRepositoryURI(id));
+        return getRepository(getRepositoryURI(id));
     }
 
+    static public IRegistry getRegistryByID(String id)
+            throws RepException {
+        return getRegistry(getRegistryURI(id));
+    }
 
     static public IRegistry getRegistry(String uri)
             throws RepException {
@@ -44,7 +48,8 @@ public class Connector {
 
     static public String getDirectoryURI(String objectID) {
         return getRegistryURI(objectID);
-        // return String.format("rmi://localhost:%d/%s_DIRECTORY", PORT_NUMBER, objectID);
+        // return String.format("rmi://localhost:%d/%s_DIRECTORY", PORT_NUMBER,
+        // objectID);
     }
 
     static public String getRegistryURI(String objectID) {

@@ -3,6 +3,7 @@ package com.assignment2.distribution;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import com.assignment2.core.Connector;
 import com.assignment2.core.IRegistry;
@@ -34,12 +35,39 @@ public class Registry extends UnicastRemoteObject implements IRegistry {
     }
 
     @Override
-    public synchronized void register(String id, String uri) throws RemoteException {
-        this.servers.put(id, uri);
+    public void register(String repoID, String uri) throws RemoteException {
+        if (servers.containsKey(repoID)) {
+            System.out.println(String.format("<Registry %s> Registering already known server %s", this.id, repoID));
+            // We assume that if we have already added this server previously, then we can
+            // assume
+            // that we have already passed on the information to other servers.
+        } else {
+            System.out.println(String.format("<Registry %s> Registered %s URI: %s", this.id, repoID, uri));
+            addServer(repoID, uri);
+
+            for (Entry<String, String> entry : servers.entrySet()) {
+                String key = entry.getKey();
+
+                // Spread the information in this registration to all other servers
+                if (!key.equals(this.id) && !key.equals(repoID)) {
+                    Connector.getRegistryByID(key).register(repoID, uri);
+                }
+
+                // Pass info from this server to the registering server
+                if (!key.equals(repoID)) {
+                    Connector.getRegistryByID(repoID).register(key, entry.getValue());
+                }
+            }
+        }
     }
 
     @Override
-    public synchronized void unregister(String id) throws RemoteException {
-        servers.remove(id);
+    public synchronized void unregister(String repoID) throws RemoteException {
+        System.out.println(String.format("<Registry %s> Unregistered %s", this.id, repoID));
+        servers.remove(repoID);
+    }
+
+    private synchronized void addServer(String repoID, String uri) {
+        servers.put(repoID, uri);
     }
 }
