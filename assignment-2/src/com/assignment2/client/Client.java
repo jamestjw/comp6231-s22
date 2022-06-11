@@ -11,6 +11,8 @@ public class Client {
     public static void main(String[] argv) throws Exception {
         try {
             IDistributedRepository repo = Connector.getRepositoryByID("R1");
+            String[] emptyArray = {};
+
             repo.reset();
             assert_eq(repo.get("A"), Collections.emptyList());
 
@@ -20,6 +22,7 @@ public class Client {
             repo.add("A", 2);
             assert_eq(repo.get("A"), List.of(5, 2));
             assert_eq(repo.sum("A"), 7);
+            assert_eq(repo.dsum("A", emptyArray), 7);
 
             assert_eq(repo.max("A"), 5);
             assert_eq(repo.min("A"), 2);
@@ -31,11 +34,11 @@ public class Client {
 
             repo.delete("A");
             assert_eq(repo.get("A"), Collections.emptyList());
+
+            System.out.println("All tests passed.");
         } catch (RemoteException e) {
             System.err.println("Unable to connect to repo R1: " + e.getMessage());
         }
-
-        System.out.println("All tests passed.");
     }
 
     private static void assert_eq(Object a, Object b) throws Exception {

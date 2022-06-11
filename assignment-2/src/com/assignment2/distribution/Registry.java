@@ -1,6 +1,7 @@
 package com.assignment2.distribution;
 
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 
 import com.assignment2.core.Connector;
@@ -8,10 +9,13 @@ import com.assignment2.core.IRegistry;
 import com.assignment2.core.IRepository;
 import com.assignment2.core.RepException;
 
-public class Registry implements IRegistry {
+public class Registry extends UnicastRemoteObject implements IRegistry {
     // Key: Server ID
     // Value: RMI ID
-    HashMap<String, String> servers;
+    HashMap<String, String> servers = new HashMap<>();
+
+    public Registry() throws RemoteException {
+    }
 
     @Override
     public IRepository find(String id) throws RemoteException {

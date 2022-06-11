@@ -12,7 +12,6 @@ import com.assignment2.core.Connector;
 import com.assignment2.core.IDirectory;
 import com.assignment2.core.IDistributedRepository;
 import com.assignment2.core.IRepository;
-import com.assignment2.core.RepException;
 
 public class Repository extends UnicastRemoteObject implements IDistributedRepository {
     HashMap<String, List<Integer>> data;

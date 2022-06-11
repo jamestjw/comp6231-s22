@@ -7,6 +7,7 @@ import java.rmi.registry.LocateRegistry;
 
 import com.assignment2.core.Connector;
 import com.assignment2.core.RepException;
+import com.assignment2.distribution.Registry;
 import com.assignment2.repository.Repository;
 
 public class RepositoryService {
@@ -20,12 +21,22 @@ public class RepositoryService {
         try {
             LocateRegistry.createRegistry(Connector.PORT_NUMBER);
 
-            Repository exportedObj = new Repository(id);
-            String registryURI = Connector.getRepositoryURI(id);
-            Naming.rebind(registryURI, exportedObj);
-            System.out.println(String.format("Server %s is ready", id));
+            // Construct remote registry for repository
+            Registry exportedRegistry = new Registry();
+            String registryURI = Connector.getRegistryURI(id);
+            Naming.rebind(registryURI, exportedRegistry);
+            System.out.println(String.format("Remote registry for %s is ready", id));
+
+            // Register registry object
+            Repository exportedRepo = new Repository(id);
+            String repoURI = Connector.getRepositoryURI(id);
+            Naming.rebind(repoURI, exportedRepo);
+            exportedRegistry.register(id, repoURI);
+
+            System.out.println(String.format("Remote repository for %s is ready", id));
+
         } catch (RemoteException | MalformedURLException e) {
-            throw new RepException(e);
+                        throw new RepException(e);
         }
     }
 }
