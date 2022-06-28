@@ -3,7 +3,6 @@ package com.assignment2.main;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 import com.assignment2.core.Connector;
 import com.assignment2.core.RepException;

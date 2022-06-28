@@ -15,4 +15,8 @@ public interface IRepository extends IAggregate {
     public void delete(String key) throws RemoteException;
 
     public void reset() throws RemoteException;
+
+    public void enumerateKeys(IClientCallback reference) throws RemoteException;
+
+    public void enumerateValues(String key, IClientCallback reference) throws RemoteException;
 }

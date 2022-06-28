@@ -7,9 +7,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.OptionalDouble;
 
 import com.assignment2.core.Connector;
+import com.assignment2.core.IClientCallback;
 import com.assignment2.core.IDirectory;
 import com.assignment2.core.IDistributedRepository;
 import com.assignment2.core.IRepository;
@@ -149,5 +149,19 @@ public class Repository extends UnicastRemoteObject implements IDistributedRepos
     @Override
     public List<String> ls() throws RemoteException {
         return new ArrayList<>(data.keySet());
+    }
+
+    @Override
+    public synchronized void enumerateKeys(IClientCallback reference) throws RemoteException {
+      for (String key: data.keySet()) {
+        reference.keyCallback(key);
+      } 
+    }
+
+    @Override
+    public synchronized void enumerateValues(String key, IClientCallback reference) throws RemoteException {
+        for (Integer val: this.get(key)) {
+            reference.valueCallback(val);
+        }
     }
 }

@@ -1,14 +1,20 @@
 package com.assignment2.client;
 
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Collections;
 import java.util.List;
 
 import com.assignment2.core.Connector;
+import com.assignment2.core.IClientCallback;
 import com.assignment2.core.IDistributedRepository;
 
-public class Client {
-    public static void main(String[] argv) throws Exception {
+public class Client extends UnicastRemoteObject implements IClientCallback {
+    protected Client() throws RemoteException {
+        super();
+    }
+
+    public void accessRemoteRepositories() throws Exception {
         try {
             IDistributedRepository r1 = Connector.getRepositoryByID("R1");
             IDistributedRepository r2 = Connector.getRepositoryByID("R2");
@@ -36,10 +42,19 @@ public class Client {
             assert_eq(r1.avg("B"), 0.0);
 
             r1.add("B", 10);
-            assert_eq(r1.ls(), List.of("A", "B")); 
+            r1.add("B", 9);
+            r1.add("B", 8);
+            assert_eq(r1.ls(), List.of("A", "B"));
+            assert_eq(r1.ls(), List.of("A", "B"));
+            assert_eq(r1.ls(), List.of("A", "B"));
+
+            r1.enumerateKeys(this);
+            r1.enumerateValues("B", this);
 
             r1.delete("A");
             assert_eq(r1.get("A"), Collections.emptyList());
+
+
 
             System.out.println("Single repo tests passed.");
 
@@ -71,6 +86,10 @@ public class Client {
         }
     }
 
+    public static void main(String[] argv) throws Exception {
+        new Client().accessRemoteRepositories();
+    }
+
     private static void assert_eq(Object a, Object b) throws Exception {
         if (a == null || b == null) {
             // Check if they are both null
@@ -82,5 +101,15 @@ public class Client {
                 throw new Exception(a + " != " + b);
             }
         }
+    }
+
+    @Override
+    public void keyCallback(String key) throws RemoteException {
+        System.out.println("Key callback: " + key);
+    }
+
+    @Override
+    public void valueCallback(Integer value) throws RemoteException {
+        System.out.println("Value callback: " + value);
     }
 }

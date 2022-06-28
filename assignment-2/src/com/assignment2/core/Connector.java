@@ -36,7 +36,6 @@ public class Connector {
         }
     }
 
-    // TODO: Do we need both directory and registry here?
     static public IDirectory getDirectory(String uri)
             throws RepException {
         try {
