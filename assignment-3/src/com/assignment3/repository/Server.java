@@ -16,7 +16,7 @@ public class Server {
         MPI.Init(args);
         int rank = MPI.COMM_WORLD.Rank();
         int size = MPI.COMM_WORLD.Size();
-        int tag = 1;
+        int numSlaveNodes = size - 1;
 
         if (size < 2) {
             System.err.println("At least two nodes are required to run the repository.");
@@ -25,7 +25,8 @@ public class Server {
 
         // Master process
         if (rank == 0) {
-            Master m = new Master();
+            // TODO: Here we should just host Master object with RMI interface
+            Master m = new Master(numSlaveNodes);
             m.upload();
         }
         // Slave process
