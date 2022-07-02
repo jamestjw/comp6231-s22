@@ -30,7 +30,7 @@ public class Server {
             Master m = new Master(numSlaveNodes);
             String filename = "test.txt";
             byte[] data = "testing".getBytes();
-            int filesize = data.length;
+            int filesize = 5000;
             m.upload(filename, filesize, new ByteArrayInputStream(data));
         }
         // Slave process

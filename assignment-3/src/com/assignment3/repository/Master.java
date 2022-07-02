@@ -37,42 +37,64 @@ public class Master {
     /*
      * Handles a file upload
      */
-    public void upload(String filename, int filesize, InputStream data) throws Master.InsufficientStorageException, Master.DuplicateFilenameException {
-        ArrayList<StorageLocation> destinations;
+    public void upload(String filename, int filesize, InputStream data)
+            throws Exception {
+        ArrayList<StorageLocation> destinations = allocateStorageLocations(filesize);
+        int destinationIndex = 0;
 
         if (records.containsKey(filename))
             throw new DuplicateFilenameException("Filename already exists.");
 
         try {
-            destinations = allocateStorageLocations(filesize);
             FileEntry entry = new FileEntry(filename, filesize);
 
-            for (int i = 0; i < destinations.size(); i++) {
-                StorageLocation destination = destinations.get(i);
+            for (; destinationIndex < destinations.size(); destinationIndex++) {
+                StorageLocation destination = destinations.get(destinationIndex);
                 entry.addLocation(destination);
-                uploadFilePart(filename, filesize, data, i, destination.slaveRank, destination.clusterNumber);
+                uploadFilePart(filename, filesize, data, destinationIndex, destination.slaveRank,
+                        destination.clusterNumber);
             }
 
             this.records.put(filename, entry);
-        } catch (IOException e) {
-            // TODO: Rethrow exception after handling cleanup
-            e.printStackTrace();
+        } catch (IOException | Master.BrokenFileException e) {
+            writeLog("Error: Invalid file " + filename);
+            writeLog("Error: " + e.getMessage());
+
+            // Remove file parts that were successfully uploaded before
+            for (int i = 0; i < destinationIndex; i++) {
+                StorageLocation destination = destinations.get(i);
+                slaveAvailableClusters.add(destination);
+                writeLog(String.format("Deleting cluster %d on node %d", destination.clusterNumber, destination.slaveRank));
+            }
+
+            throw e;
         }
     }
 
+    // public void deleteFilePart(int destinationRank, int destinationClusterNumber) {
+    //     byte buffer_send[] = ByteBuffer.allocate(4).putInt(destinationClusterNumber).array();
+    //     MPI.COMM_WORLD.Send(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, Slave.DELETE_TAG);
+
+    //     MPI.COMM_WORLD.Recv(new byte[0], 0, 0, MPI.BYTE, destinationRank, Slave.DELETE_SUCCESSFUL_TAG);
+
+    //     writeLog(String.format("Successfully deleted cluster number %d on node %d.", destinationClusterNumber,
+    //             destinationRank));
+    // }
+
     public void uploadFilePart(String filename, int filesize, InputStream data, int partNumber, int destinationRank,
-            int destinationClusterNumber) throws IOException {
+            int destinationClusterNumber) throws IOException, BrokenFileException {
         byte buffer_send[] = generateByteArray(destinationClusterNumber, Slave.CLUSTER_SIZE, data);
 
         MPI.COMM_WORLD.Send(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, Slave.WRITE_TAG);
 
-        MPI.COMM_WORLD.Recv(new byte[0], 0, 0, MPI.BYTE, destinationRank, Slave.SUCCESSFUL_WRITE_TAG);
+        MPI.COMM_WORLD.Recv(new byte[0], 0, 0, MPI.BYTE, destinationRank, Slave.WRITE_SUCCESSFUL_TAG);
 
         writeLog(String.format("Successfully written to node %d on cluster number %d.", destinationRank,
                 destinationClusterNumber));
     }
 
-    private static byte[] generateByteArray(int clusterNum, int dataLength, InputStream data) throws IOException {
+    private byte[] generateByteArray(int clusterNum, int dataLength, InputStream data)
+            throws IOException, Master.BrokenFileException {
         // Assume that integer has size of 4
         byte buffer[] = new byte[dataLength + 4];
         byte i[] = ByteBuffer.allocate(4).putInt(clusterNum).array(); // Put cluster num in a byte array
@@ -84,6 +106,9 @@ public class Master {
                 4);
 
         int numBytes = data.read(buffer, 4, Slave.CLUSTER_SIZE);
+
+        if (numBytes <= 0)
+            throw new BrokenFileException("File size does not match actual file");
 
         writeLog(String.format("Writing %d bytes", numBytes));
 
@@ -154,6 +179,12 @@ public class Master {
 
     public class DuplicateFilenameException extends Exception {
         public DuplicateFilenameException(String errorMessage) {
+            super(errorMessage);
+        }
+    }
+
+    public class BrokenFileException extends Exception {
+        public BrokenFileException(String errorMessage) {
             super(errorMessage);
         }
     }

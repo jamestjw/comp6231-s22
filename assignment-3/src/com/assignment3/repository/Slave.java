@@ -12,7 +12,9 @@ public class Slave {
     public static final int MAX_MEM = CLUSTER_SIZE * NUM_CLUSTERS; // Each node has 100 clusters
     public static final int READ_TAG = 1;
     public static final int WRITE_TAG = 2;
-    public static final int SUCCESSFUL_WRITE_TAG = 3;
+    public static final int WRITE_SUCCESSFUL_TAG = 3;
+    public static final int DELETE_TAG = 4;
+    public static final int DELETE_SUCCESSFUL_TAG = 5;
     public static final int MASTER_RANK = 0;
     public static final int WRITE_BUFFER_SIZE = CLUSTER_SIZE + 4; // Use 1st 4 bytes to store cluster number
 
@@ -24,7 +26,8 @@ public class Slave {
     }
 
     /*
-     * The slave node listens for messages from the Master node and will respond to requests
+     * The slave node listens for messages from the Master node and will respond to
+     * requests
      * to read and write data to it.
      */
     public void run() {
@@ -35,7 +38,6 @@ public class Slave {
     private void handleReads() {
         writeLog("Listening for reads");
     }
-
 
     private void handleWrites() {
         writeLog("Listening for writes");
@@ -48,11 +50,11 @@ public class Slave {
             writeLog(String.format("Writing to cluster number %d.", clusterNumber));
 
             write(buffer_rcv, clusterNumber);
-        
+
             writeLog(String.format("Write to cluster number %d was successful.", clusterNumber));
 
             // Send success tag to master node
-            MPI.COMM_WORLD.Send(new byte[0], 0, 0, MPI.BYTE, MASTER_RANK, SUCCESSFUL_WRITE_TAG);
+            MPI.COMM_WORLD.Send(new byte[0], 0, 0, MPI.BYTE, MASTER_RANK, WRITE_SUCCESSFUL_TAG);
         }
     }
 
