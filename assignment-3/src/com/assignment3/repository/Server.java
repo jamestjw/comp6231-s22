@@ -1,6 +1,7 @@
 // Unable to run MPI with this :( I hate java
 // package com.assignment3.repository;
 
+import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 
 import mpi.MPI;
@@ -27,7 +28,10 @@ public class Server {
         if (rank == 0) {
             // TODO: Here we should just host Master object with RMI interface
             Master m = new Master(numSlaveNodes);
-            m.upload();
+            String filename = "test.txt";
+            byte[] data = "testing".getBytes();
+            int filesize = data.length;
+            m.upload(filename, filesize, new ByteArrayInputStream(data));
         }
         // Slave process
         else {
