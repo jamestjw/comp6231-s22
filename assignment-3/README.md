@@ -3,5 +3,11 @@
 ## How to run?
 ### Server
 ```bash
-(export MPJ_HOME=./mpj-v0_44 && cd src/com/assignment3/repository/ && javac -cp $MPJ_HOME/lib/mpj.jar Server.java Slave.java Master.java && $MPJ_HOME/bin/mpjrun.sh -np 4 Server)
+export MPJ_HOME=./mpj-v0_44
+javac -cp $MPJ_HOME/lib/mpj.jar  FileDoesNotExistExcepti.java Slave.java Master.java InsufficientStorageException.java BrokenFileException.java Repository.java Server.java DuplicateFilenameException.java InvalidURLException.java Client.java && $MPJ_HOME/bin/mpjrun.sh -np 4 Server
+```
+
+### Client
+```bash
+java -cp "$MPJ_HOME/lib/mpj.jar:./" Client.java
 ```
