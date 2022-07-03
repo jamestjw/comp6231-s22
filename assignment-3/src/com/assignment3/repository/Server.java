@@ -37,6 +37,14 @@ public class Server {
             for (String url : m.listFiles()) {
                 System.out.println(url);
             }
+
+            m.delete("//magical-file-system/test.txt");
+
+
+            System.out.println("Listing files");
+            for (String url : m.listFiles()) {
+                System.out.println(url);
+            }
         }
         // Slave process
         else {
