@@ -2,6 +2,7 @@
 // package com.assignment3.repository;
 
 import java.io.ByteArrayInputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import mpi.MPI;
@@ -38,8 +39,10 @@ public class Server {
                 System.out.println(url);
             }
 
-            m.delete("//magical-file-system/test.txt");
+            OutputStream os = m.download("//magical-file-system/test.txt");
+            System.out.println(os.toString());
 
+            m.delete("//magical-file-system/test.txt");
 
             System.out.println("Listing files");
             for (String url : m.listFiles()) {

@@ -1,9 +1,11 @@
 // Unable to run MPI with this :( I hate java
 // package com.assignment3.repository;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream.Filter;
 import java.util.ArrayList;
@@ -46,6 +48,10 @@ public class Master {
         return res;
     }
 
+    /*
+     * Deletes a file by removing the file entry and restoring the
+     * availability of all of its storage locations
+     */
     public synchronized void delete(String url) throws Master.InvalidURLException, Master.FileDoesNotExistException {
         String filename = parseURL(url);
 
@@ -105,22 +111,58 @@ public class Master {
         }
     }
 
-    // public void deleteFilePart(int destinationRank, int destinationClusterNumber)
-    // {
-    // byte buffer_send[] =
-    // ByteBuffer.allocate(4).putInt(destinationClusterNumber).array();
-    // MPI.COMM_WORLD.Send(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE,
-    // destinationRank, Slave.DELETE_TAG);
+    /*
+     * Downloads a file by giving the caller and OutputStream containing the file
+     */
+    public OutputStream download(String url) throws InvalidURLException, FileDoesNotExistException, IOException {
+        String filename = parseURL(url);
 
-    // MPI.COMM_WORLD.Recv(new byte[0], 0, 0, MPI.BYTE, destinationRank,
-    // Slave.DELETE_SUCCESSFUL_TAG);
+        FileEntry entry = records.get(filename);
 
-    // writeLog(String.format("Successfully deleted cluster number %d on node %d.",
-    // destinationClusterNumber,
-    // destinationRank));
-    // }
+        if (entry == null)
+            throw new FileDoesNotExistException("File does not exist");
 
-    public void uploadFilePart(String filename, int filesize, InputStream data, int partNumber, int destinationRank,
+        writeLog(String.format("Handling request to download file: %s", filename));
+
+        ByteArrayOutputStream res = new ByteArrayOutputStream(entry.size);
+
+        for (int i = 0; i < entry.directory.size(); i++) {
+            int size;
+
+            // Last part may not be aligned to cluster size
+            if (i == entry.directory.size() - 1) {
+                size = entry.size % Slave.CLUSTER_SIZE;
+            } else {
+                size = Slave.CLUSTER_SIZE;
+            }
+            StorageLocation location = entry.directory.get(i);
+            downloadFilePart(res, location.slaveRank, location.clusterNumber, size);
+        }
+
+        return res;
+    }
+
+    /*
+     * This method accepts `clusterSize` because the last cluster could contain less
+     * than
+     * the max cluster size.
+     */
+    private void downloadFilePart(OutputStream os, int destinationRank, int destinationClusterNumber, int clusterSize)
+            throws IOException {
+        byte buffer_recv[] = new byte[Slave.CLUSTER_SIZE];
+        int buffer_send[] = { destinationClusterNumber };
+
+        MPI.COMM_WORLD.Send(buffer_send, 0, 1, MPI.INT, destinationRank, Slave.READ_TAG);
+
+        MPI.COMM_WORLD.Recv(buffer_recv, 0, Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, Slave.READ_TAG);
+
+        writeLog(String.format("Successfully downloaded cluster number %d from node %d.", destinationClusterNumber,
+                destinationRank));
+
+        os.write(buffer_recv, 0, clusterSize);
+    }
+
+    private void uploadFilePart(String filename, int filesize, InputStream data, int partNumber, int destinationRank,
             int destinationClusterNumber) throws IOException, BrokenFileException {
         byte buffer_send[] = generateByteArray(destinationClusterNumber, Slave.CLUSTER_SIZE, data);
 
@@ -132,6 +174,11 @@ public class Master {
                 destinationClusterNumber));
     }
 
+    /*
+     * Given an input stream of file data, creates a byte array that is ready to be
+     * sent to
+     * Slave nodes via MPI
+     */
     private byte[] generateByteArray(int clusterNum, int dataLength, InputStream data)
             throws IOException, Master.BrokenFileException {
         // Assume that integer has size of 4
@@ -158,6 +205,9 @@ public class Master {
         System.out.println(String.format("<MASTER> %s", s));
     }
 
+    /*
+     * Given a filesize, generate a random list of file storage locations
+     */
     private synchronized ArrayList<StorageLocation> allocateStorageLocations(int filesize)
             throws InsufficientStorageException {
         int numClustersRequired = (int) Math.ceil((double) filesize / Slave.CLUSTER_SIZE);
