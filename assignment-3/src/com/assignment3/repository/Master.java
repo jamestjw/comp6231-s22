@@ -34,6 +34,16 @@ public class Master {
         writeLog(String.format("Active with %d slave nodes.", numSlaves));
     }
 
+    public List<String> listFiles() {
+        ArrayList<String> res = new ArrayList<>();
+
+        for (FileEntry record : records.values()) {
+            res.add(generateLogicalName(record.name));
+        }
+
+        return res;
+    }
+
     /*
      * Handles a file upload
      */
@@ -64,21 +74,27 @@ public class Master {
             for (int i = 0; i < destinationIndex; i++) {
                 StorageLocation destination = destinations.get(i);
                 slaveAvailableClusters.add(destination);
-                writeLog(String.format("Deleting cluster %d on node %d", destination.clusterNumber, destination.slaveRank));
+                writeLog(String.format("Deleting cluster %d on node %d", destination.clusterNumber,
+                        destination.slaveRank));
             }
 
             throw e;
         }
     }
 
-    // public void deleteFilePart(int destinationRank, int destinationClusterNumber) {
-    //     byte buffer_send[] = ByteBuffer.allocate(4).putInt(destinationClusterNumber).array();
-    //     MPI.COMM_WORLD.Send(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, Slave.DELETE_TAG);
+    // public void deleteFilePart(int destinationRank, int destinationClusterNumber)
+    // {
+    // byte buffer_send[] =
+    // ByteBuffer.allocate(4).putInt(destinationClusterNumber).array();
+    // MPI.COMM_WORLD.Send(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE,
+    // destinationRank, Slave.DELETE_TAG);
 
-    //     MPI.COMM_WORLD.Recv(new byte[0], 0, 0, MPI.BYTE, destinationRank, Slave.DELETE_SUCCESSFUL_TAG);
+    // MPI.COMM_WORLD.Recv(new byte[0], 0, 0, MPI.BYTE, destinationRank,
+    // Slave.DELETE_SUCCESSFUL_TAG);
 
-    //     writeLog(String.format("Successfully deleted cluster number %d on node %d.", destinationClusterNumber,
-    //             destinationRank));
+    // writeLog(String.format("Successfully deleted cluster number %d on node %d.",
+    // destinationClusterNumber,
+    // destinationRank));
     // }
 
     public void uploadFilePart(String filename, int filesize, InputStream data, int partNumber, int destinationRank,
@@ -187,5 +203,9 @@ public class Master {
         public BrokenFileException(String errorMessage) {
             super(errorMessage);
         }
+    }
+
+    private static String generateLogicalName(String filename) {
+        return String.format("//magical-file-system/%s", filename);
     }
 }
