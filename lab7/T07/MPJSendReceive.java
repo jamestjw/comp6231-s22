@@ -1,5 +1,5 @@
-
 import mpi.*;
+
 public class MPJSendReceive{
 	public static void main(String[] args) throws Exception{
 	       if (args.length < 5) {
@@ -47,7 +47,7 @@ public class MPJSendReceive{
 		}
 
 		else{
-			System.out.println("My ID is <" + rank +">. I'm noy doing anything");
+			System.out.println("My ID is <" + rank +">. I'm not doing anything");
 		}
 		MPI.Finalize();
 	}
