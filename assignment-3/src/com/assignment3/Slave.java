@@ -1,5 +1,4 @@
 // Unable to run MPI with this :( I hate java
-// package com.assignment3.repository;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -57,8 +56,10 @@ public class Slave {
         writeLog("Listening for writes");
 
         while (true) {
-            byte buffer_rcv[] = new byte[CLUSTER_SIZE + 4]; // Use first 4 bytes to indicate cluster number
+             byte buffer_rcv[] = new byte[CLUSTER_SIZE + 4]; // Use first 4 bytes to indicate cluster number
             MPI.COMM_WORLD.Recv(buffer_rcv, 0, WRITE_BUFFER_SIZE, MPI.BYTE, MASTER_RANK, WRITE_TAG);
+            writeLog("handling write!");
+
             int clusterNumber = ByteBuffer.wrap(buffer_rcv, 0, 4).getInt();
 
             writeLog(String.format("Writing to cluster number %d.", clusterNumber));
