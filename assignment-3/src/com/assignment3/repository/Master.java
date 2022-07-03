@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -44,6 +46,29 @@ public class Master {
         return res;
     }
 
+    public synchronized void delete(String url) throws Master.InvalidURLException, Master.FileDoesNotExistException {
+        String filename = parseURL(url);
+
+        FileEntry entry = records.get(filename);
+
+        if (entry == null)
+            throw new FileDoesNotExistException("File does not exist");
+
+        writeLog(String.format("Deleting file: %s", filename));
+
+        for (StorageLocation location : entry.directory) {
+            restoreStorageLocation(location);
+        }
+
+        records.remove(filename);
+    }
+
+    private synchronized void restoreStorageLocation(StorageLocation location) {
+        slaveAvailableClusters.add(location);
+        writeLog(String.format("Deleting cluster %d on node %d", location.clusterNumber,
+                location.slaveRank));
+    }
+
     /*
      * Handles a file upload
      */
@@ -73,9 +98,7 @@ public class Master {
             // Remove file parts that were successfully uploaded before
             for (int i = 0; i < destinationIndex; i++) {
                 StorageLocation destination = destinations.get(i);
-                slaveAvailableClusters.add(destination);
-                writeLog(String.format("Deleting cluster %d on node %d", destination.clusterNumber,
-                        destination.slaveRank));
+                restoreStorageLocation(destination);
             }
 
             throw e;
@@ -205,7 +228,30 @@ public class Master {
         }
     }
 
+    public class InvalidURLException extends Exception {
+        public InvalidURLException(String errorMessage) {
+            super(errorMessage);
+        }
+    }
+
+    public class FileDoesNotExistException extends Exception {
+        public FileDoesNotExistException(String errorMessage) {
+            super(errorMessage);
+        }
+    }
+
     private static String generateLogicalName(String filename) {
         return String.format("//magical-file-system/%s", filename);
+    }
+
+    private String parseURL(String url) throws Master.InvalidURLException {
+        Pattern pattern = Pattern.compile("//magical-file-system/(.*)");
+        Matcher matcher = pattern.matcher(url);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        } else {
+            throw new InvalidURLException("Invalid file URL was given.");
+        }
     }
 }
