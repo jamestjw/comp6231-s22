@@ -29,6 +29,7 @@ public class Server {
         if (rank == 0) {
             String rmiUrl = "rmi://localhost:6231/REPOSITORY";
             Master m = new Master(numSlaveNodes);
+            RepositoryProxy r = new RepositoryProxy(m);
 
             // String filename = "test.txt";
             // byte[] data = "testing".getBytes();
@@ -36,7 +37,7 @@ public class Server {
             // m.upload(filename, filesize, data);
 
             LocateRegistry.createRegistry(6231);
-            Naming.rebind(rmiUrl, m);
+            Naming.rebind(rmiUrl, r);
             System.out.println(String.format("Hosted repository at RMI URL %s", rmiUrl));
 
             // String filename = "test.txt";

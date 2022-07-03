@@ -7,7 +7,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream.Filter;
-import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,12 +19,12 @@ import java.util.stream.IntStream;
 
 import mpi.MPI;
 
-public class Master extends UnicastRemoteObject implements Repository {
+public class Master implements Repository {
     int numSlaves;
     ArrayList<StorageLocation> slaveAvailableClusters;
     HashMap<String, FileEntry> records;
 
-    public Master(int numSlaves) throws RemoteException {
+    public Master(int numSlaves) {
         this.numSlaves = numSlaves;
         this.slaveAvailableClusters = new ArrayList<>();
         this.records = new HashMap<>();
