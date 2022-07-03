@@ -37,6 +37,20 @@ public class Slave {
 
     private void handleReads() {
         writeLog("Listening for reads");
+
+        while (true) {
+            int buffer_rcv[] = new int[1];
+            byte buffer_send[] = new byte[CLUSTER_SIZE];
+            MPI.COMM_WORLD.Recv(buffer_rcv, 0, 1, MPI.INT, MASTER_RANK, READ_TAG);
+            int clusterNumber = buffer_rcv[0];
+
+            writeLog(String.format("Reading cluster number %d.", clusterNumber));
+
+            read(buffer_send, clusterNumber);
+
+            // Send success tag to master node
+            MPI.COMM_WORLD.Send(buffer_send, 0, CLUSTER_SIZE, MPI.BYTE, MASTER_RANK, READ_TAG);
+        }
     }
 
     private void handleWrites() {
