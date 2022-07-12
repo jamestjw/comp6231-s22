@@ -20,7 +20,7 @@ import java.util.stream.IntStream;
 
 import mpi.MPI;
 
-public class Master extends UnicastRemoteObject implements Repository {
+public class Master implements Repository {
     int numSlaves;
     ArrayList<StorageLocation> slaveAvailableClusters;
     HashMap<String, FileEntry> records;
@@ -167,10 +167,7 @@ public class Master extends UnicastRemoteObject implements Repository {
             int destinationClusterNumber) throws IOException, BrokenFileException {
         int offset = partNumber * Slave.CLUSTER_SIZE;
         byte buffer_send[] = generateByteArray(destinationClusterNumber, Slave.CLUSTER_SIZE, data, offset);
-
-        MPI.COMM_WORLD.Send(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, Slave.WRITE_TAG);
-
-        MPI.COMM_WORLD.Recv(new byte[0], 0, 0, MPI.BYTE, destinationRank, Slave.WRITE_SUCCESSFUL_TAG);
+        RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, Slave.WRITE_TAG, new byte[0], 0, 0, MPI.BYTE, destinationRank, Slave.WRITE_TAG);
 
         writeLog(String.format("Successfully written to node %d on cluster number %d.", destinationRank,
                 destinationClusterNumber));

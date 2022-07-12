@@ -1,5 +1,3 @@
-// Unable to run MPI with this :( I hate java
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
@@ -9,11 +7,9 @@ public class Slave {
     public static final int CLUSTER_SIZE = 4096; // 4096 bytes
     public static final int NUM_CLUSTERS = 100; // 4096 bytes
     public static final int MAX_MEM = CLUSTER_SIZE * NUM_CLUSTERS; // Each node has 100 clusters
-    public static final int READ_TAG = 1;
-    public static final int WRITE_TAG = 2;
-    public static final int WRITE_SUCCESSFUL_TAG = 3;
-    public static final int DELETE_TAG = 4;
-    public static final int DELETE_SUCCESSFUL_TAG = 5;
+    public static final int READ_TAG = 0b001;
+    public static final int WRITE_TAG = 0b010;
+    public static final int DELETE_TAG = 0b011;
     public static final int MASTER_RANK = 0;
     public static final int WRITE_BUFFER_SIZE = CLUSTER_SIZE + 4; // Use 1st 4 bytes to store cluster number
 
@@ -69,7 +65,7 @@ public class Slave {
             writeLog(String.format("Write to cluster number %d was successful.", clusterNumber));
 
             // Send success tag to master node
-            MPI.COMM_WORLD.Send(new byte[0], 0, 0, MPI.BYTE, MASTER_RANK, WRITE_SUCCESSFUL_TAG);
+            MPI.COMM_WORLD.Send(new byte[0], 0, 0, MPI.BYTE, MASTER_RANK, WRITE_TAG);
         }
     }
 
