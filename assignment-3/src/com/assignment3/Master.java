@@ -18,6 +18,8 @@ import java.util.stream.IntStream;
 import mpi.MPI;
 
 public class Master implements Repository {
+    private static boolean DEBUG_MODE = true;
+
     int numSlaves;
     ArrayList<StorageLocation> slaveAvailableClusters;
     HashMap<String, FileEntry> records;
@@ -65,6 +67,9 @@ public class Master implements Repository {
         }
 
         records.remove(filename);
+
+
+        if (DEBUG_MODE) printClusterInformation();
     }
 
     private synchronized void restoreStorageLocation(StorageLocation location) {
@@ -107,6 +112,8 @@ public class Master implements Repository {
 
             throw e;
         }
+
+        if (DEBUG_MODE) printClusterInformation();
     }
 
     /*
@@ -266,5 +273,46 @@ public class Master implements Repository {
         } else {
             throw new InvalidURLException("Invalid file URL was given.");
         }
+    }
+
+    private void printClusterInformation() {
+        String[][] data = new String[Slave.NUM_CLUSTERS][numSlaves];
+        for (int cluster = 0; cluster < Slave.NUM_CLUSTERS; cluster++) {
+            for (int node = 0; node < numSlaves; node++) {
+                data[cluster][node] = "<empty>";
+            }
+        }
+
+        for (FileEntry record: records.values()) {
+            for (int i = 0; i < record.directory.size(); i++) {
+                StorageLocation location = record.directory.get(i);
+                data[location.clusterNumber][location.slaveRank - 1] = String.format("%s #%d", truncateString(record.name, 15), i + 1);
+            }
+        }
+        
+        AsciiTable table = new AsciiTable();
+        table.setMaxColumnWidth(45);
+    
+        table.getColumns().add(new AsciiTable.Column("Cluster #"));
+        for (int i = 0; i < numSlaves; i++)
+           table.getColumns().add(new AsciiTable.Column("Node " + (i + 1)));
+    
+
+        for (int cluster = 0; cluster < Slave.NUM_CLUSTERS; cluster++) {
+            AsciiTable.Row row = new AsciiTable.Row();
+            table.getData().add(row);
+            row.getValues().add(String.valueOf(cluster + 1));
+
+            for (int node = 0; node < numSlaves; node++) {
+                row.getValues().add(data[cluster][node]);
+            }
+        }
+    
+        table.calculateColumnWidth();
+        table.render();
+    }
+
+    private static String truncateString(String s, int maxLength) {
+        return s.substring(0, Math.min(s.length(), maxLength)) + "...";
     }
 }
