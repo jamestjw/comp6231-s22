@@ -2,8 +2,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.file.DirectoryStream.Filter;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -12,8 +10,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.lang.StringBuilder;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import mpi.MPI;
 
@@ -82,15 +81,16 @@ public class Master implements Repository {
      * Handles a file upload
      */
     public void upload(String filename, int filesize, byte[] data)
-            throws IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException {
-        ArrayList<StorageLocation> destinations = allocateStorageLocations(filesize);
+            throws IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException, NoSuchAlgorithmException {
+        String hash = produceHash(filename);
+        ArrayList<StorageLocation> destinations = allocateStorageLocations(filesize, hash);
         int destinationIndex = 0;
 
         if (records.containsKey(filename))
             throw new DuplicateFilenameException("Filename already exists.");
 
         try {
-            FileEntry entry = new FileEntry(filename, filesize);
+            FileEntry entry = new FileEntry(filename, filesize, hash);
 
             for (; destinationIndex < destinations.size(); destinationIndex++) {
                 StorageLocation destination = destinations.get(destinationIndex);
@@ -208,7 +208,7 @@ public class Master implements Repository {
     /*
      * Given a filesize, generate a random list of file storage locations
      */
-    private synchronized ArrayList<StorageLocation> allocateStorageLocations(int filesize)
+    private synchronized ArrayList<StorageLocation> allocateStorageLocations(int filesize, String hash)
             throws InsufficientStorageException {
         int numClustersRequired = (int) Math.ceil((double) filesize / Slave.CLUSTER_SIZE);
 
@@ -218,7 +218,7 @@ public class Master implements Repository {
 
         ArrayList<StorageLocation> res = new ArrayList<>();
 
-        Random rand = new Random();
+        Random rand = new Random(stringToSeed(hash));
         for (int i = 0; i < numClustersRequired; i++) {
             // Get random location from list and add it to the result
             int indexToGet = rand.nextInt(slaveAvailableClusters.size());
@@ -234,12 +234,14 @@ public class Master implements Repository {
 
     private class FileEntry {
         private String name;
+        private String hash;
         private int size;
         private List<StorageLocation> directory;
 
-        FileEntry(String name, int size) {
+        FileEntry(String name, int size, String hash) {
             this.name = name;
             this.size = size;
+            this.hash = hash;
             this.directory = new ArrayList<>();
         }
 
@@ -313,6 +315,39 @@ public class Master implements Repository {
     }
 
     private static String truncateString(String s, int maxLength) {
-        return s.substring(0, Math.min(s.length(), maxLength)) + "...";
+        String res = s.substring(0, Math.min(s.length(), maxLength));
+
+        if (s.length() > maxLength)
+            res += "...";
+
+        return res;
+    }
+
+    // Produces a hash for a filename (also uses system time)
+    private static String produceHash(String filename) throws NoSuchAlgorithmException {
+        String toHash = filename + String.valueOf(System.currentTimeMillis());
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        byte[] hash = md.digest(toHash.getBytes());
+        StringBuilder strBuilder = new StringBuilder();
+
+        for (byte b: hash)
+        {
+            strBuilder.append(String.format("%02x", b));
+        }
+        String strHash = strBuilder.toString();
+
+        return strHash;
+    }
+
+    // https://stackoverflow.com/questions/23981678/is-it-possible-to-use-a-string-as-a-seed-for-an-instance-random
+    private static long stringToSeed(String s) {
+        if (s == null) {
+            return 0;
+        }
+        long hash = 0;
+        for (char c: s.toCharArray()) {
+            hash = 31L * hash + c;
+        }
+        return hash;
     }
 }
