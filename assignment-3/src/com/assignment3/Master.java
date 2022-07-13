@@ -148,9 +148,9 @@ public class Master implements Repository {
     private void downloadFilePart(OutputStream os, int destinationRank, int destinationClusterNumber, int clusterSize)
             throws IOException {
         byte buffer_recv[] = new byte[Slave.CLUSTER_SIZE];
-        int buffer_send[] = { destinationClusterNumber };
+        int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.READ_TAG; 
 
-        RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, 1, MPI.INT, destinationRank, Slave.READ_TAG, buffer_recv, 0, Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, Slave.READ_TAG);
+        RMIServer.MPI_PROXY.Sendrecv(new byte[0], 0, 0, MPI.BYTE, destinationRank, tag, buffer_recv, 0, Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, tag);
 
         writeLog(String.format("Successfully downloaded cluster number %d from node %d.", destinationClusterNumber,
                 destinationRank));
@@ -161,8 +161,10 @@ public class Master implements Repository {
     private void uploadFilePart(String filename, int filesize, byte[] data, int partNumber, int destinationRank,
             int destinationClusterNumber) throws IOException, BrokenFileException {
         int offset = partNumber * Slave.CLUSTER_SIZE;
-        byte buffer_send[] = generateByteArray(destinationClusterNumber, Slave.CLUSTER_SIZE, data, offset);
-        RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, Slave.WRITE_TAG, new byte[0], 0, 0, MPI.BYTE, destinationRank, Slave.WRITE_TAG);
+        byte buffer_send[] = generateByteArray(Slave.CLUSTER_SIZE, data, offset);
+
+        int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.WRITE_TAG; 
+        RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, tag, new byte[0], 0, 0, MPI.BYTE, destinationRank, tag);
 
         writeLog(String.format("Successfully written to node %d on cluster number %d.", destinationRank,
                 destinationClusterNumber));
@@ -173,18 +175,9 @@ public class Master implements Repository {
      * sent to
      * Slave nodes via MPI
      */
-    private byte[] generateByteArray(int clusterNum, int dataLength, byte[] data, int offset)
+    private byte[] generateByteArray(int dataLength, byte[] data, int offset)
             throws IOException, BrokenFileException {
-        // Assume that integer has size of 4
-        byte buffer[] = new byte[dataLength + 4];
-        byte i[] = ByteBuffer.allocate(4).putInt(clusterNum).array(); // Put cluster num in a byte array
-
-        System.arraycopy(i,
-                0,
-                buffer,
-                0,
-                4);
-
+        byte buffer[] = new byte[dataLength];
         int numBytes = Math.min(data.length - offset, Slave.CLUSTER_SIZE);
 
         if (numBytes <= 0)
@@ -193,7 +186,7 @@ public class Master implements Repository {
         System.arraycopy(data,
                 offset,
                 buffer,
-                4,
+                0,
                 numBytes);
 
         writeLog(String.format("Writing %d bytes", numBytes));

@@ -2,16 +2,20 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import mpi.MPI;
+import mpi.Status;
 
 public class Slave {
     public static final int CLUSTER_SIZE = 4096; // 4096 bytes
     public static final int NUM_CLUSTERS = 500;
     public static final int MAX_MEM = CLUSTER_SIZE * NUM_CLUSTERS; // Each node has 100 clusters
+
     public static final int READ_TAG = 0b001;
     public static final int WRITE_TAG = 0b010;
-    public static final int DELETE_TAG = 0b011;
+    public static final int TAG_MASK = 0b111;
+    public static final int TAG_CLUSTER_NUM_SHIFT = 3; // Num bits in mask
+
     public static final int MASTER_RANK = 0;
-    public static final int WRITE_BUFFER_SIZE = CLUSTER_SIZE + 4; // Use 1st 4 bytes to store cluster number
+    public static final int WRITE_BUFFER_SIZE = CLUSTER_SIZE;
 
     private byte[] data = new byte[MAX_MEM];
     private int rank;
@@ -26,46 +30,53 @@ public class Slave {
      * to read and write data to it.
      */
     public void run() {
-        new Thread(() -> handleReads()).start();
-        new Thread(() -> handleWrites()).start();
+        new Thread(() -> listenRequests()).start();
     }
 
-    private void handleReads() {
-        writeLog("Listening for reads");
+    private void listenRequests() {
+        writeLog("Listening for requests");
 
         while (true) {
-            int buffer_rcv[] = new int[1];
-            byte buffer_send[] = new byte[CLUSTER_SIZE];
-            MPI.COMM_WORLD.Recv(buffer_rcv, 0, 1, MPI.INT, MASTER_RANK, READ_TAG);
-            int clusterNumber = buffer_rcv[0];
+           byte buffer_rcv[] = new byte[WRITE_BUFFER_SIZE];
+           Status s = MPI.COMM_WORLD.Recv(buffer_rcv, 0, WRITE_BUFFER_SIZE, MPI.BYTE, MASTER_RANK, MPI.ANY_TAG);
 
-            writeLog(String.format("Reading cluster number %d.", clusterNumber));
+           int clusterNumber = s.tag >> TAG_CLUSTER_NUM_SHIFT;
+           int tag = s.tag & TAG_MASK;
 
-            read(buffer_send, clusterNumber);
-
-            // Send success tag to master node
-            MPI.COMM_WORLD.Send(buffer_send, 0, CLUSTER_SIZE, MPI.BYTE, MASTER_RANK, READ_TAG);
-        }
+           switch (tag) {
+            case READ_TAG:
+                handleRead(clusterNumber, s.tag);
+                break;
+            case WRITE_TAG:
+                handleWrite(clusterNumber, s.tag, buffer_rcv);
+                break;
+            default:
+                writeLog(String.format("Unexpected tag %d received, ignoring request", tag));
+                break;
+           }
+       } 
     }
 
-    private void handleWrites() {
-        writeLog("Listening for writes");
+    private void handleRead(int clusterNumber, int originalTag) {
+        byte buffer_send[] = new byte[CLUSTER_SIZE];
 
-        while (true) {
-             byte buffer_rcv[] = new byte[CLUSTER_SIZE + 4]; // Use first 4 bytes to indicate cluster number
-            MPI.COMM_WORLD.Recv(buffer_rcv, 0, WRITE_BUFFER_SIZE, MPI.BYTE, MASTER_RANK, WRITE_TAG);
+        writeLog(String.format("Reading cluster number %d.", clusterNumber));
 
-            int clusterNumber = ByteBuffer.wrap(buffer_rcv, 0, 4).getInt();
+        read(buffer_send, clusterNumber);
 
-            writeLog(String.format("Writing to cluster number %d.", clusterNumber));
+        // Send original tag back to master node
+        MPI.COMM_WORLD.Send(buffer_send, 0, CLUSTER_SIZE, MPI.BYTE, MASTER_RANK, originalTag);
+    }
 
-            write(buffer_rcv, clusterNumber);
+    private void handleWrite(int clusterNumber, int originalTag, byte[] data) {
+        writeLog(String.format("Writing to cluster number %d.", clusterNumber));
 
-            writeLog(String.format("Write to cluster number %d was successful.", clusterNumber));
+        write(data, clusterNumber);
 
-            // Send success tag to master node
-            MPI.COMM_WORLD.Send(new byte[0], 0, 0, MPI.BYTE, MASTER_RANK, WRITE_TAG);
-        }
+        writeLog(String.format("Write to cluster number %d was successful.", clusterNumber));
+
+        // Send original tag to master node
+        MPI.COMM_WORLD.Send(new byte[0], 0, 0, MPI.BYTE, MASTER_RANK, originalTag);
     }
 
     /*
@@ -74,7 +85,7 @@ public class Slave {
     private void write(byte[] d, int clusterNum) {
         assert clusterNum >= 0 && clusterNum < NUM_CLUSTERS : "Invalid clusterNum";
         System.arraycopy(d,
-                4, // Because the first 4 bytes denote the cluster number
+                0,
                 data,
                 clusterStartIndex(clusterNum),
                 CLUSTER_SIZE);
