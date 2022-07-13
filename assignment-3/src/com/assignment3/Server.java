@@ -1,5 +1,3 @@
-// Unable to run MPI with this :( I hate java
-
 import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;

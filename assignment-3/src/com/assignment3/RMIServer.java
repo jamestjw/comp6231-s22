@@ -50,7 +50,7 @@ public class RMIServer {
                 for (String name : _reg.list()) {
                     _reg.unbind(name);
                 }
-               
+
                 MPI_PROXY.stop();
                 MPI_PROXY = null;
                 reg = null;

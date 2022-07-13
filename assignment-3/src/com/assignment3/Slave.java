@@ -5,7 +5,7 @@ import mpi.MPI;
 
 public class Slave {
     public static final int CLUSTER_SIZE = 4096; // 4096 bytes
-    public static final int NUM_CLUSTERS = 100; // 4096 bytes
+    public static final int NUM_CLUSTERS = 500;
     public static final int MAX_MEM = CLUSTER_SIZE * NUM_CLUSTERS; // Each node has 100 clusters
     public static final int READ_TAG = 0b001;
     public static final int WRITE_TAG = 0b010;

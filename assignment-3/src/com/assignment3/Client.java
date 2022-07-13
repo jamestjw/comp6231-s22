@@ -7,6 +7,7 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.io.IOException;
+import java.io.FileOutputStream;
 
 public class Client {
     private static Scanner input = new Scanner(System.in);
@@ -27,6 +28,8 @@ public class Client {
         {
             System.out.println("\n1. List files");
             System.out.println("2. Upload file");
+            System.out.println("3. Delete file");
+            System.out.println("4. Download file");
             System.out.println("Input 'q' to exit.");
             System.out.print("Your next command: ");
             String in = input.next();
@@ -36,6 +39,12 @@ public class Client {
                     break;
                 case "2":
                     handleUploadFile(r);
+                    break;
+                case "3":
+                    handleDeleteFile(r);
+                    break;
+                case "4":
+                    handleDownloadFile(r);
                     break;
                 case "q":
                     running = false;
@@ -83,6 +92,59 @@ public class Client {
             }
         } catch (IOException e) {
             printError("Unable to read from file.");
+        }
+    }
+
+    private static void handleDeleteFile(Repository r) {
+        System.out.print("File URL: ");
+        String fileURL = input.next();
+
+        try {
+            System.out.print("Deleting file... ");
+            r.delete(fileURL);
+            System.out.println("SUCCESS");
+        } catch (Exception e) {
+            System.out.println("FAILED");
+            printError("Failed to delete - " + e.getMessage());
+        }
+    }
+
+    private static void handleDownloadFile(Repository r) {
+        System.out.print("File URL: ");
+        String fileURL = input.next();
+
+        try {
+            System.out.print("Downloading file... ");
+            byte[] data = r.download(fileURL);
+            System.out.println("SUCCESS");
+
+            String filename = Paths.get(fileURL).getFileName().toString();
+            saveFile(data, filename);
+        } catch (Exception e) {
+            System.out.println("FAILED");
+            printError("Failed to download - " + e.getMessage());
+        }
+    }
+
+    private static void saveFile(byte[] data, String filename) {
+        File file = new File(filename);
+
+        if (file.exists()) {
+            // Change the filename and try again
+            // Splits filename to base and extension, returns array of size 1
+            // if extension does not exist, otherwise size 2
+            String[] tokens = filename.split("\\.(?=[^\\.]+$)");
+            String newFileName = tokens[0] + " - copy";
+            if (tokens.length == 2)
+                newFileName += "." + tokens[1];
+
+            saveFile(data, newFileName);
+        } else {
+            try (FileOutputStream outputStream = new FileOutputStream(file)) {
+                outputStream.write(data);
+            } catch (Exception e) {
+                printError("Failed to write: " + e.getMessage());
+            }
         }
     }
 

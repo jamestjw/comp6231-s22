@@ -1,9 +1,6 @@
-// Unable to run MPI with this :( I hate java
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream.Filter;
@@ -115,7 +112,7 @@ public class Master implements Repository {
     /*
      * Downloads a file by giving the caller and OutputStream containing the file
      */
-    public OutputStream download(String url) throws InvalidURLException, FileDoesNotExistException, IOException {
+    public byte[] download(String url) throws InvalidURLException, FileDoesNotExistException, IOException {
         String filename = parseURL(url);
 
         FileEntry entry = records.get(filename);
@@ -140,7 +137,7 @@ public class Master implements Repository {
             downloadFilePart(res, location.slaveRank, location.clusterNumber, size);
         }
 
-        return res;
+        return res.toByteArray();
     }
 
     /*
@@ -153,9 +150,7 @@ public class Master implements Repository {
         byte buffer_recv[] = new byte[Slave.CLUSTER_SIZE];
         int buffer_send[] = { destinationClusterNumber };
 
-        MPI.COMM_WORLD.Send(buffer_send, 0, 1, MPI.INT, destinationRank, Slave.READ_TAG);
-
-        MPI.COMM_WORLD.Recv(buffer_recv, 0, Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, Slave.READ_TAG);
+        RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, 1, MPI.INT, destinationRank, Slave.READ_TAG, buffer_recv, 0, Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, Slave.READ_TAG);
 
         writeLog(String.format("Successfully downloaded cluster number %d from node %d.", destinationClusterNumber,
                 destinationRank));
@@ -218,7 +213,7 @@ public class Master implements Repository {
         int numClustersRequired = (int) Math.ceil((double) filesize / Slave.CLUSTER_SIZE);
 
         if (numClustersRequired > slaveAvailableClusters.size()) {
-            throw new InsufficientStorageException("Not enough storage");
+            throw new InsufficientStorageException(String.format("Not enough storage, required %d clusters but only have %d remaining", numClustersRequired, slaveAvailableClusters.size()));
         }
 
         ArrayList<StorageLocation> res = new ArrayList<>();
