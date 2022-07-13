@@ -54,7 +54,6 @@ public class Slave {
         while (true) {
              byte buffer_rcv[] = new byte[CLUSTER_SIZE + 4]; // Use first 4 bytes to indicate cluster number
             MPI.COMM_WORLD.Recv(buffer_rcv, 0, WRITE_BUFFER_SIZE, MPI.BYTE, MASTER_RANK, WRITE_TAG);
-            writeLog("handling write!");
 
             int clusterNumber = ByteBuffer.wrap(buffer_rcv, 0, 4).getInt();
 
