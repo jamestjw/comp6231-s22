@@ -31,37 +31,8 @@ public class Server {
             String rmiUrl = "rmi://localhost:6231/REPOSITORY";
             Master m = new Master(numSlaveNodes);
 
-            // String filename = "test.txt";
-            // byte[] data = "testing".getBytes();
-            // int filesize = data.length;
-            // m.upload(filename, filesize, data);
-
             RMIServer.start(RMI_PORT);
             RMIServer.register(m, RMI_OBJ_NAME);
-
-            // LocateRegistry.createRegistry(6231);
-            // Naming.rebind(rmiUrl, m);
-            // System.out.println(String.format("Hosted repository at RMI URL %s", rmiUrl));
-
-            // String filename = "test.txt";
-            // byte[] data = "testing".getBytes();
-            // int filesize = data.length;
-            // m.upload(filename, filesize, new ByteArrayInputStream(data));
-
-            // System.out.println("Listing files");
-            // for (String url : m.listFiles()) {
-            //     System.out.println(url);
-            // }
-
-            // OutputStream os = m.download("//magical-file-system/test.txt");
-            // System.out.println(os.toString());
-
-            // m.delete("//magical-file-system/test.txt");
-
-            // System.out.println("Listing files");
-            // for (String url : m.listFiles()) {
-            // System.out.println(url);
-            // }
         }
         // Slave process
         else {
