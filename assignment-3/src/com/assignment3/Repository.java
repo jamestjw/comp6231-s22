@@ -11,6 +11,7 @@ public interface Repository extends Remote {
     public void delete(String url) throws RemoteException, InvalidURLException, FileDoesNotExistException;
 
     public void upload(String filename, int filesize, IRemoteInputStream input) throws RemoteException, IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException, NoSuchAlgorithmException;
+    public void upload(String filename, int filesize, byte[] data) throws RemoteException, IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException, NoSuchAlgorithmException;
 
     public void download(String url, IRemoteOutputStream output) throws RemoteException, IOException, FileDoesNotExistException, InvalidURLException;
 }

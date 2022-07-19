@@ -72,8 +72,10 @@ public class Client {
         }
 
         try {
-            RemoteInputStream input = new RemoteInputStream(new FileInputStream(filePath));
-            int fileSize = (int) Files.size(path);
+            // RemoteInputStream input = new RemoteInputStream(new FileInputStream(filePath));
+            // int fileSize = (int) Files.size(path);
+            byte[] input = Files.readAllBytes(path);
+            int fileSize = input.length;
 
             System.out.print(String.format("Uploading %s (%d bytes)...", fileName, fileSize));
 
