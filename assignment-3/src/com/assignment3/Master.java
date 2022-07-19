@@ -79,7 +79,7 @@ public class Master implements Repository {
     /*
      * Handles a file upload
      */
-    public void upload(String filename, int filesize, byte[] data)
+    public void upload(String filename, int filesize, IRemoteInputStream data)
             throws IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException, NoSuchAlgorithmException {
         String hash = produceHash(filename);
         ArrayList<StorageLocation> destinations = allocateStorageLocations(filesize, hash);
@@ -118,7 +118,7 @@ public class Master implements Repository {
     /*
      * Downloads a file by giving the caller and OutputStream containing the file
      */
-    public byte[] download(String url) throws InvalidURLException, FileDoesNotExistException, IOException {
+    public void download(String url, IRemoteOutputStream output) throws InvalidURLException, FileDoesNotExistException, IOException {
         String filename = parseURL(url);
 
         FileEntry entry = records.get(filename);
@@ -127,8 +127,6 @@ public class Master implements Repository {
             throw new FileDoesNotExistException("File does not exist");
 
         writeLog(String.format("Handling request to download file: %s", filename));
-
-        ByteArrayOutputStream res = new ByteArrayOutputStream(entry.size);
 
         for (int i = 0; i < entry.directory.size(); i++) {
             int size;
@@ -140,10 +138,8 @@ public class Master implements Repository {
                 size = Slave.CLUSTER_SIZE;
             }
             StorageLocation location = entry.directory.get(i);
-            downloadFilePart(res, location.slaveRank, location.clusterNumber, size);
+            downloadFilePart(output, location.slaveRank, location.clusterNumber, size);
         }
-
-        return res.toByteArray();
     }
 
     /*
@@ -151,23 +147,26 @@ public class Master implements Repository {
      * than
      * the max cluster size.
      */
-    private void downloadFilePart(OutputStream os, int destinationRank, int destinationClusterNumber, int clusterSize)
+    private void downloadFilePart(IRemoteOutputStream os, int destinationRank, int destinationClusterNumber, int clusterSize)
             throws IOException {
         byte buffer_recv[] = new byte[Slave.CLUSTER_SIZE];
         int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.READ_TAG; 
 
         RMIServer.MPI_PROXY.Sendrecv(new byte[0], 0, 0, MPI.BYTE, destinationRank, tag, buffer_recv, 0, Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, tag);
 
-        writeLog(String.format("Successfully downloaded cluster number %d from node %d.", destinationClusterNumber,
-                destinationRank));
+        writeLog(String.format("Successfully downloaded cluster number %d from node %d (size: %d bytes).", destinationClusterNumber,
+                destinationRank, clusterSize));
 
         os.write(buffer_recv, 0, clusterSize);
     }
 
-    private void uploadFilePart(String filename, int filesize, byte[] data, int partNumber, int destinationRank,
+    private void uploadFilePart(String filename, int filesize, IRemoteInputStream input, int partNumber, int destinationRank,
             int destinationClusterNumber) throws IOException, BrokenFileException {
         int offset = partNumber * Slave.CLUSTER_SIZE;
-        byte buffer_send[] = generateByteArray(Slave.CLUSTER_SIZE, data, offset);
+        byte[] buffer_send = new byte[Slave.CLUSTER_SIZE];
+        int lenRead = input.read(buffer_send, 0, Slave.CLUSTER_SIZE);
+        if (lenRead <= 0)
+            throw new BrokenFileException("File size does not match actual file");
 
         int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.WRITE_TAG; 
         RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, tag, new byte[0], 0, 0, MPI.BYTE, destinationRank, tag);
@@ -176,29 +175,29 @@ public class Master implements Repository {
                 destinationClusterNumber));
     }
 
-    /*
-     * Given an input stream of file data, creates a byte array that is ready to be
-     * sent to
-     * Slave nodes via MPI
-     */
-    private byte[] generateByteArray(int dataLength, byte[] data, int offset)
-            throws IOException, BrokenFileException {
-        byte buffer[] = new byte[dataLength];
-        int numBytes = Math.min(data.length - offset, Slave.CLUSTER_SIZE);
+    // /*
+    //  * Given an input stream of file data, creates a byte array that is ready to be
+    //  * sent to
+    //  * Slave nodes via MPI
+    //  */
+    // private byte[] generateByteArray(int dataLength, byte[] data, int offset)
+    //         throws IOException, BrokenFileException {
+    //     byte buffer[] = new byte[dataLength];
+    //     int numBytes = Math.min(data.length - offset, Slave.CLUSTER_SIZE);
 
-        if (numBytes <= 0)
-            throw new BrokenFileException("File size does not match actual file");
+    //     if (numBytes <= 0)
+    //         throw new BrokenFileException("File size does not match actual file");
 
-        System.arraycopy(data,
-                offset,
-                buffer,
-                0,
-                numBytes);
+    //     System.arraycopy(data,
+    //             offset,
+    //             buffer,
+    //             0,
+    //             numBytes);
 
-        writeLog(String.format("Writing %d bytes", numBytes));
+    //     writeLog(String.format("Writing %d bytes", numBytes));
 
-        return buffer;
-    }
+    //     return buffer;
+    // }
 
     private static void writeLog(String s) {
         System.out.println(String.format("<MASTER> %s", s));
