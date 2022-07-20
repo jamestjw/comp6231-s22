@@ -79,46 +79,6 @@ public class Master implements Repository {
     /*
      * Handles a file upload
      */
-    // public void upload(String filename, int filesize, IRemoteInputStream data)
-    //         throws IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException, NoSuchAlgorithmException {
-    //     String hash = produceHash(filename);
-    //     ArrayList<StorageLocation> destinations = allocateStorageLocations(filesize, hash);
-    //     int destinationIndex = 0;
-
-    //     if (records.containsKey(filename))
-    //         throw new DuplicateFilenameException("Filename already exists.");
-
-    //     try {
-    //         FileEntry entry = new FileEntry(filename, filesize, hash);
-
-    //         for (; destinationIndex < destinations.size(); destinationIndex++) {
-    //             StorageLocation destination = destinations.get(destinationIndex);
-    //             entry.addLocation(destination);
-    //             uploadFilePart(filename, filesize, data, destinationIndex, destination.slaveRank,
-    //                     destination.clusterNumber);
-    //         }
-
-    //         this.records.put(filename, entry);
-    //     } catch (IOException | BrokenFileException e) {
-    //         writeLog("Error: Invalid file " + filename);
-    //         writeLog("Error: " + e.getMessage());
-
-    //         // Remove file parts that were successfully uploaded before
-    //         for (int i = 0; i < destinationIndex; i++) {
-    //             StorageLocation destination = destinations.get(i);
-    //             restoreStorageLocation(destination);
-    //         }
-
-    //         throw e;
-    //     }
-
-    //     if (DEBUG_MODE) printClusterInformation();
-    // }
-
-
-    /*
-     * Handles a file upload
-     */
     public void upload(String filename, int filesize, byte[] data)
             throws IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException, NoSuchAlgorithmException {
         String hash = produceHash(filename);
@@ -199,22 +159,6 @@ public class Master implements Repository {
 
         os.write(buffer_recv, 0, clusterSize);
     }
-
-    // private void uploadFilePart(String filename, int filesize, IRemoteInputStream input, int partNumber, int destinationRank,
-    //         int destinationClusterNumber) throws IOException, BrokenFileException {
-    //     byte[] buffer_send = new byte[Slave.CLUSTER_SIZE];
-    //     int lenRead = input.read(buffer_send, 0, Slave.CLUSTER_SIZE);
-    //     if (lenRead <= 0)
-    //         throw new BrokenFileException("File size does not match actual file");
-    //     else
-    //         writeLog(String.format("Writing %d bytes to node %d on cluster number %d.", lenRead, destinationRank, destinationClusterNumber)); 
-
-    //     int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.WRITE_TAG; 
-    //     RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, tag, new byte[0], 0, 0, MPI.BYTE, destinationRank, tag);
-
-    //     writeLog(String.format("Successfully written to node %d on cluster number %d.", destinationRank,
-    //             destinationClusterNumber));
-    // }
 
     private void uploadFilePart(String filename, int filesize, byte[] data, int partNumber, int destinationRank,
             int destinationClusterNumber) throws IOException, BrokenFileException {
