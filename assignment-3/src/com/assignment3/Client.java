@@ -3,7 +3,9 @@ import java.util.Scanner;
 import java.util.List;
 import java.rmi.RemoteException;
 import java.nio.file.Files;
+import java.io.FileOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.io.IOException;
@@ -17,8 +19,7 @@ public class Client {
 
         boolean running = true;
 
-        while (running)
-        {
+        while (running) {
             System.out.println("\n1. List files");
             System.out.println("2. Upload file");
             System.out.println("3. Delete file");
@@ -71,13 +72,13 @@ public class Client {
         }
 
         try {
-            byte[] data = Files.readAllBytes(path);
-            int fileSize = data.length;
+            byte[] input = Files.readAllBytes(path);
+            int fileSize = input.length;
 
             System.out.print(String.format("Uploading %s (%d bytes)...", fileName, fileSize));
 
             try {
-                r.upload(fileName, fileSize, data);
+                r.upload(fileName, fileSize, input);
                 System.out.println("DONE");
             } catch (Exception e) {
                 System.out.println("FAILED");
@@ -108,18 +109,17 @@ public class Client {
 
         try {
             System.out.print("Downloading file... ");
-            byte[] data = r.download(fileURL);
-            System.out.println("SUCCESS");
-
             String filename = Paths.get(fileURL).getFileName().toString();
-            saveFile(data, filename);
+            RemoteOutputStream os = new RemoteOutputStream(new FileOutputStream(dedupFileName(filename)));
+            r.download(fileURL, os);
+            System.out.println("SUCCESS");
         } catch (Exception e) {
             System.out.println("FAILED");
             printError("Failed to download - " + e.getMessage());
         }
     }
 
-    private static void saveFile(byte[] data, String filename) {
+    private static String dedupFileName(String filename) {
         File file = new File(filename);
 
         if (file.exists()) {
@@ -131,13 +131,9 @@ public class Client {
             if (tokens.length == 2)
                 newFileName += "." + tokens[1];
 
-            saveFile(data, newFileName);
+            return dedupFileName(newFileName);
         } else {
-            try (FileOutputStream outputStream = new FileOutputStream(file)) {
-                outputStream.write(data);
-            } catch (Exception e) {
-                printError("Failed to write: " + e.getMessage());
-            }
+            return filename;
         }
     }
 

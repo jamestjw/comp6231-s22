@@ -118,7 +118,7 @@ public class Master implements Repository {
     /*
      * Downloads a file by giving the caller and OutputStream containing the file
      */
-    public byte[] download(String url) throws InvalidURLException, FileDoesNotExistException, IOException {
+    public void download(String url, IRemoteOutputStream output) throws InvalidURLException, FileDoesNotExistException, IOException {
         String filename = parseURL(url);
 
         FileEntry entry = records.get(filename);
@@ -127,8 +127,6 @@ public class Master implements Repository {
             throw new FileDoesNotExistException("File does not exist");
 
         writeLog(String.format("Handling request to download file: %s", filename));
-
-        ByteArrayOutputStream res = new ByteArrayOutputStream(entry.size);
 
         for (int i = 0; i < entry.directory.size(); i++) {
             int size;
@@ -140,10 +138,8 @@ public class Master implements Repository {
                 size = Slave.CLUSTER_SIZE;
             }
             StorageLocation location = entry.directory.get(i);
-            downloadFilePart(res, location.slaveRank, location.clusterNumber, size);
+            downloadFilePart(output, location.slaveRank, location.clusterNumber, size);
         }
-
-        return res.toByteArray();
     }
 
     /*
@@ -151,15 +147,15 @@ public class Master implements Repository {
      * than
      * the max cluster size.
      */
-    private void downloadFilePart(OutputStream os, int destinationRank, int destinationClusterNumber, int clusterSize)
+    private void downloadFilePart(IRemoteOutputStream os, int destinationRank, int destinationClusterNumber, int clusterSize)
             throws IOException {
         byte buffer_recv[] = new byte[Slave.CLUSTER_SIZE];
         int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.READ_TAG; 
 
         RMIServer.MPI_PROXY.Sendrecv(new byte[0], 0, 0, MPI.BYTE, destinationRank, tag, buffer_recv, 0, Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, tag);
 
-        writeLog(String.format("Successfully downloaded cluster number %d from node %d.", destinationClusterNumber,
-                destinationRank));
+        writeLog(String.format("Successfully downloaded cluster number %d from node %d (size: %d bytes).", destinationClusterNumber,
+                destinationRank, clusterSize));
 
         os.write(buffer_recv, 0, clusterSize);
     }

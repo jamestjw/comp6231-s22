@@ -3,6 +3,7 @@ import java.rmi.Remote;
 import java.util.List;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.io.OutputStream;
 
 public interface Repository extends Remote {
     public List<String> listFiles() throws RemoteException;
@@ -11,5 +12,6 @@ public interface Repository extends Remote {
 
     public void upload(String filename, int filesize, byte[] data) throws RemoteException, IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException, NoSuchAlgorithmException;
 
-    public byte[] download(String url) throws RemoteException, IOException, FileDoesNotExistException, InvalidURLException;
+    public void download(String url, IRemoteOutputStream output) throws RemoteException, IOException, FileDoesNotExistException, InvalidURLException;
 }
+
