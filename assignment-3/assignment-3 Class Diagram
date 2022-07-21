@@ -1,0 +1,138 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+class AsciiTable {
+  - data: List<Row>
+  - maxColumnWidth: int
+  - columns: List<Column>
+  + getMaxColumnWidth(): int
+  + getColumns(): List<Column>
+  + render(): void
+  - writeColumnNames(List<Column>, StringBuilder): void
+  - writeSeparator(List<Column>, StringBuilder): void
+  + getData(): List<Row>
+  + calculateColumnWidth(): void
+  - writeValues(List<Column>, List<Row>, StringBuilder): void
+  + setMaxColumnWidth(int): void
+}
+class BrokenFileException
+class Client {
+  - input: Scanner
+  - dedupFileName(String): String
+  - handleDownloadFile(Repository): void
+  - printError(String): void
+  + main(String[]): void
+  - handleListFiles(Repository): void
+  - handleDeleteFile(Repository): void
+  - handleUploadFile(Repository): void
+}
+class DuplicateFilenameException
+class FileDoesNotExistException
+interface IRemoteInputStream << interface >> {
+  + read(byte[], int, int): int
+  + close(): void
+  + read(): int
+  + available(): int
+}
+interface IRemoteOutputStream << interface >> {
+  + write(byte): void
+  + write(byte[], int, int): void
+}
+class InsufficientStorageException
+class InvalidURLException
+class Master {
+  - DEBUG_MODE: boolean
+  ~ slaveAvailableClusters: ArrayList<StorageLocation>
+  ~ records: HashMap<String, FileEntry>
+  ~ numSlaves: int
+  - writeLog(String): void
+  + delete(String): void
+  - truncateString(String, int): String
+  - generateByteArray(int, byte[], int): byte[]
+  + upload(String, int, IRemoteInputStream): void
+  - uploadFilePart(int, IRemoteInputStream, int, int, int): void
+  - downloadFilePart(IRemoteOutputStream, int, int, int): void
+  - produceHash(String): String
+  - parseURL(String): String
+  - allocateStorageLocations(int, String): ArrayList<StorageLocation>
+  - generateLogicalName(String): String
+  - stringToSeed(String): long
+  - restoreStorageLocation(StorageLocation): void
+  - printClusterInformation(): void
+  + listFiles(): List<String>
+  + download(String, IRemoteOutputStream): void
+}
+class RMIServer {
+  - reg: Registry
+  - shutdown: Thread
+  - NTHREADS: int
+  + MPI_PROXY: MPIProxy
+  + stop(): void
+  + getURI(int, String): String
+  + start(int): void
+  + register(T): void
+  + register(T, String): void
+  + getURI(String, int, String): String
+}
+class RemoteInputStream {
+  - input: InputStream
+  + available(): int
+  + read(byte[], int, int): int
+  + close(): void
+  + read(): int
+}
+class RemoteOutputStream {
+  - output: OutputStream
+  + write(int): void
+  + write(byte[], int, int): void
+}
+interface Repository << interface >> {
+  + listFiles(): List<String>
+  + upload(String, int, IRemoteInputStream): void
+  + delete(String): void
+  + download(String, IRemoteOutputStream): void
+}
+class Server {
+  + RMI_PORT: int
+  + RMI_OBJ_NAME: String
+  + main(String[]): void
+}
+class Slave {
+  + WRITE_TAG: int
+  + CLUSTER_SIZE: int
+  + MAX_MEM: int
+  + NUM_CLUSTERS: int
+  + READ_TAG: int
+  + TAG_MASK: int
+  + TAG_CLUSTER_NUM_SHIFT: int
+  + MASTER_RANK: int
+  + WRITE_BUFFER_SIZE: int
+  - data: byte[]
+  - rank: int
+  - listenRequests(): void
+  - write(byte[], int): void
+  - read(byte[], int): void
+  - clusterStartIndex(int): int
+  - handleRead(int, int): void
+  - handleWrite(int, int, byte[]): void
+  + run(): void
+  - writeLog(String): void
+}
+
+Client                        -[#595959,dashed]->  RemoteInputStream            : "«»"
+Client                        -[#595959,dashed]->  RemoteOutputStream           : "«»"
+Master                        -[#595959,dashed]->  AsciiTable                   : "«»"
+Master                        -[#595959,dashed]->  BrokenFileException          : "«»"
+Master                        -[#595959,dashed]->  DuplicateFilenameException   : "«»"
+Master                        -[#595959,dashed]->  FileDoesNotExistException    : "«»"
+Master                        -[#595959,dashed]->  InsufficientStorageException : "«»"
+Master                        -[#595959,dashed]->  InvalidURLException          : "«»"
+Master                        -[#008200,dashed]-^  Repository                   
+RemoteInputStream             -[#008200,dashed]-^  IRemoteInputStream           
+RemoteOutputStream            -[#008200,dashed]-^  IRemoteOutputStream          
+Server                        -[#595959,dashed]->  Master                       : "«»"
+Server                        -[#595959,dashed]->  Slave                        : "«»"
+@enduml
