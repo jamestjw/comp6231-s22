@@ -111,6 +111,10 @@ public class Master implements Repository {
                         destination.clusterNumber);
             }
 
+            if (input.available() > 0)
+                // Input stream should be empty at this point
+                throw new BrokenFileException("Given filesize is less than the amount of data to read.");
+
             this.records.put(filename, entry);
         } catch (BrokenFileException e) {
             writeLog("Error: Invalid file " + filename);
@@ -184,9 +188,12 @@ public class Master implements Repository {
 
         for (int i = 0; i < dataSize; i++) {
             try {
-                buffer_send[i] = (byte) input.read();
+                int b = input.read();
+                if (b == -1)
+                    throw new BrokenFileException("Unexpectedly reached EOF before filesize number of bytes have been read");
+                buffer_send[i] = (byte) b;
             } catch (IOException e) {
-                throw new BrokenFileException("Unable to read all the bytes in the file (file size mismatch?)");
+                throw new BrokenFileException("Unable to read all the bytes in the file");
             }
         }
 
