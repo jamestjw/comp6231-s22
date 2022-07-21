@@ -66,8 +66,8 @@ public class Master implements Repository {
 
         records.remove(filename);
 
-
-        if (DEBUG_MODE) printClusterInformation();
+        if (DEBUG_MODE)
+            printClusterInformation();
     }
 
     private synchronized void restoreStorageLocation(StorageLocation location) {
@@ -79,8 +79,9 @@ public class Master implements Repository {
     /*
      * Handles a file upload
      */
-    public void upload(String filename, int filesize, byte[] data)
-            throws IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException, NoSuchAlgorithmException {
+    public void upload(String filename, int filesize, IRemoteInputStream input)
+            throws IOException, BrokenFileException, InsufficientStorageException, DuplicateFilenameException,
+            NoSuchAlgorithmException {
         String hash = produceHash(filename);
         ArrayList<StorageLocation> destinations = allocateStorageLocations(filesize, hash);
         int destinationIndex = 0;
@@ -94,12 +95,24 @@ public class Master implements Repository {
             for (; destinationIndex < destinations.size(); destinationIndex++) {
                 StorageLocation destination = destinations.get(destinationIndex);
                 entry.addLocation(destination);
-                uploadFilePart(filename, filesize, data, destinationIndex, destination.slaveRank,
+
+                byte[] data = new byte[Slave.CLUSTER_SIZE];
+
+                int size;
+
+                // Last part may not be aligned to cluster size
+                if (destinationIndex == destinations.size() - 1) {
+                    size = filesize % Slave.CLUSTER_SIZE;
+                } else {
+                    size = Slave.CLUSTER_SIZE;
+                }
+
+                uploadFilePart(size, input, destinationIndex, destination.slaveRank,
                         destination.clusterNumber);
             }
 
             this.records.put(filename, entry);
-        } catch (IOException | BrokenFileException e) {
+        } catch (BrokenFileException e) {
             writeLog("Error: Invalid file " + filename);
             writeLog("Error: " + e.getMessage());
 
@@ -112,13 +125,15 @@ public class Master implements Repository {
             throw e;
         }
 
-        if (DEBUG_MODE) printClusterInformation();
+        if (DEBUG_MODE)
+            printClusterInformation();
     }
 
     /*
      * Downloads a file by giving the caller and OutputStream containing the file
      */
-    public void download(String url, IRemoteOutputStream output) throws InvalidURLException, FileDoesNotExistException, IOException {
+    public void download(String url, IRemoteOutputStream output)
+            throws InvalidURLException, FileDoesNotExistException, IOException {
         String filename = parseURL(url);
 
         FileEntry entry = records.get(filename);
@@ -147,26 +162,37 @@ public class Master implements Repository {
      * than
      * the max cluster size.
      */
-    private void downloadFilePart(IRemoteOutputStream os, int destinationRank, int destinationClusterNumber, int clusterSize)
+    private void downloadFilePart(IRemoteOutputStream os, int destinationRank, int destinationClusterNumber,
+            int clusterSize)
             throws IOException {
         byte buffer_recv[] = new byte[Slave.CLUSTER_SIZE];
-        int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.READ_TAG; 
+        int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.READ_TAG;
 
-        RMIServer.MPI_PROXY.Sendrecv(new byte[0], 0, 0, MPI.BYTE, destinationRank, tag, buffer_recv, 0, Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, tag);
+        RMIServer.MPI_PROXY.Sendrecv(new byte[0], 0, 0, MPI.BYTE, destinationRank, tag, buffer_recv, 0,
+                Slave.CLUSTER_SIZE, MPI.BYTE, destinationRank, tag);
 
-        writeLog(String.format("Successfully downloaded cluster number %d from node %d (size: %d bytes).", destinationClusterNumber,
+        writeLog(String.format("Successfully downloaded cluster number %d from node %d (size: %d bytes).",
+                destinationClusterNumber,
                 destinationRank, clusterSize));
 
         os.write(buffer_recv, 0, clusterSize);
     }
 
-    private void uploadFilePart(String filename, int filesize, byte[] data, int partNumber, int destinationRank,
-            int destinationClusterNumber) throws IOException, BrokenFileException {
-        int offset = partNumber * Slave.CLUSTER_SIZE;
-        byte buffer_send[] = generateByteArray(Slave.CLUSTER_SIZE, data, offset);
+    private void uploadFilePart(int dataSize, IRemoteInputStream input, int partNumber, int destinationRank,
+            int destinationClusterNumber) throws BrokenFileException {
+        byte[] buffer_send = new byte[Slave.CLUSTER_SIZE];
 
-        int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.WRITE_TAG; 
-        RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, tag, new byte[0], 0, 0, MPI.BYTE, destinationRank, tag);
+        for (int i = 0; i < dataSize; i++) {
+            try {
+                buffer_send[i] = (byte) input.read();
+            } catch (IOException e) {
+                throw new BrokenFileException("Unable to read all the bytes in the file (file size mismatch?)");
+            }
+        }
+
+        int tag = (destinationClusterNumber << Slave.TAG_CLUSTER_NUM_SHIFT) | Slave.WRITE_TAG;
+        RMIServer.MPI_PROXY.Sendrecv(buffer_send, 0, Slave.WRITE_BUFFER_SIZE, MPI.BYTE, destinationRank, tag,
+                new byte[0], 0, 0, MPI.BYTE, destinationRank, tag);
 
         writeLog(String.format("Successfully written to node %d on cluster number %d.", destinationRank,
                 destinationClusterNumber));
@@ -208,7 +234,9 @@ public class Master implements Repository {
         int numClustersRequired = (int) Math.ceil((double) filesize / Slave.CLUSTER_SIZE);
 
         if (numClustersRequired > slaveAvailableClusters.size()) {
-            throw new InsufficientStorageException(String.format("Not enough storage, required %d clusters but only have %d remaining", numClustersRequired, slaveAvailableClusters.size()));
+            throw new InsufficientStorageException(
+                    String.format("Not enough storage, required %d clusters but only have %d remaining",
+                            numClustersRequired, slaveAvailableClusters.size()));
         }
 
         ArrayList<StorageLocation> res = new ArrayList<>();
@@ -280,20 +308,20 @@ public class Master implements Repository {
             }
         }
 
-        for (FileEntry record: records.values()) {
+        for (FileEntry record : records.values()) {
             for (int i = 0; i < record.directory.size(); i++) {
                 StorageLocation location = record.directory.get(i);
-                data[location.clusterNumber][location.slaveRank - 1] = String.format("%s #%d", truncateString(record.name, 15), i + 1);
+                data[location.clusterNumber][location.slaveRank - 1] = String.format("%s #%d",
+                        truncateString(record.name, 15), i + 1);
             }
         }
-        
+
         AsciiTable table = new AsciiTable();
         table.setMaxColumnWidth(45);
-    
+
         table.getColumns().add(new AsciiTable.Column("Cluster #"));
         for (int i = 0; i < numSlaves; i++)
-           table.getColumns().add(new AsciiTable.Column("Node " + (i + 1)));
-    
+            table.getColumns().add(new AsciiTable.Column("Node " + (i + 1)));
 
         for (int cluster = 0; cluster < Slave.NUM_CLUSTERS; cluster++) {
             AsciiTable.Row row = new AsciiTable.Row();
@@ -304,7 +332,7 @@ public class Master implements Repository {
                 row.getValues().add(data[cluster][node]);
             }
         }
-    
+
         table.calculateColumnWidth();
         table.render();
     }
@@ -325,8 +353,7 @@ public class Master implements Repository {
         byte[] hash = md.digest(toHash.getBytes());
         StringBuilder strBuilder = new StringBuilder();
 
-        for (byte b: hash)
-        {
+        for (byte b : hash) {
             strBuilder.append(String.format("%02x", b));
         }
         String strHash = strBuilder.toString();
@@ -340,7 +367,7 @@ public class Master implements Repository {
             return 0;
         }
         long hash = 0;
-        for (char c: s.toCharArray()) {
+        for (char c : s.toCharArray()) {
             hash = 31L * hash + c;
         }
         return hash;

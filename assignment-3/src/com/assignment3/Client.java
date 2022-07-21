@@ -72,8 +72,8 @@ public class Client {
         }
 
         try {
-            byte[] input = Files.readAllBytes(path);
-            int fileSize = input.length;
+            RemoteInputStream input = new RemoteInputStream(new FileInputStream(filePath));
+            int fileSize = (int) Files.size(path);
 
             System.out.print(String.format("Uploading %s (%d bytes)...", fileName, fileSize));
 
@@ -106,16 +106,19 @@ public class Client {
     private static void handleDownloadFile(Repository r) {
         System.out.print("File URL: ");
         String fileURL = input.next();
+        String filename = Paths.get(fileURL).getFileName().toString();
+        String destFilename = dedupFileName(filename);
 
         try {
             System.out.print("Downloading file... ");
-            String filename = Paths.get(fileURL).getFileName().toString();
-            RemoteOutputStream os = new RemoteOutputStream(new FileOutputStream(dedupFileName(filename)));
+
+            RemoteOutputStream os = new RemoteOutputStream(new FileOutputStream(destFilename));
             r.download(fileURL, os);
             System.out.println("SUCCESS");
         } catch (Exception e) {
             System.out.println("FAILED");
             printError("Failed to download - " + e.getMessage());
+            new File(destFilename).delete();
         }
     }
 
