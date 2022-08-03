@@ -96,7 +96,6 @@ public class Master implements Repository {
                 StorageLocation destination = destinations.get(destinationIndex);
                 entry.addLocation(destination);
 
-                byte[] data = new byte[Slave.CLUSTER_SIZE];
 
                 int size;
 
